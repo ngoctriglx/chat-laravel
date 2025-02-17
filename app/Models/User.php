@@ -3,14 +3,34 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+
+use App\Mail\NotificationMail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Hash;
 
-class User extends Authenticatable
-{
+
+class User extends Authenticatable {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
+
+    protected $table = 'users';
+
+    protected $primaryKey = 'user_id';
+
+    public $incrementing = true;
+
+    protected $keyType = 'int';
+
+    public $timestamps = false;
+
+    const STATUS_ACTIVE = 'active';
+    const STATUS_PENDING = 'pending';
+    const STATUS_SUSPENDED = 'suspended';
+    const STATUS_BANNED = 'banned';
+    const STATUS_DEACTIVATED = 'deactivated';
 
     /**
      * The attributes that are mass assignable.
@@ -18,9 +38,13 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
-        'email',
-        'password',
+        'user_name',
+        'user_email',
+        'user_phone',
+        'user_password',
+        'user_account_status',
+        'user_banned_reason',
+        'user_registered'
     ];
 
     /**
@@ -29,8 +53,9 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $hidden = [
-        'password',
-        'remember_token',
+        'user_password',
+        'user_account_status',
+        'user_banned_reason',
     ];
 
     /**
@@ -38,11 +63,85 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
-    protected function casts(): array
-    {
+    protected function casts(): array {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'user_registered' => 'datetime',
+            'user_password' => 'hashed',
         ];
+    }
+
+    /**
+     * Get the password for authentication.
+     *
+     * @return string
+     */
+    public function getAuthPassword() {
+        return $this->user_password;
+    }
+
+    /**
+     * Get the identifier for the authentication.
+     *
+     * @return string
+     */
+    public function getAuthIdentifierName() {
+        return 'user_email';
+    }
+
+    /**
+     * Get the authentication identifier.
+     *
+     * @return string
+     */
+    public function getAuthIdentifier() {
+        return $this->getAttribute($this->getAuthIdentifierName());
+    }
+
+    public static function RegisterNotifications($user, $token) {
+        $template = 'emails.user_2fa_register';
+        $data = [
+            'verificationCode' => $token,
+        ];
+        $subject = 'Verify User Register';
+
+        Mail::to($user->user_email)->send(new NotificationMail(array(
+            'subject' => $subject,
+            'template' => $template,
+            'data' => $data
+        )));
+    }
+
+    public static function addUser($emailOrPhone, $password, $type) {
+        $user = new self();
+        if ($type == 'email') {
+            $user->user_email = $emailOrPhone;
+        } elseif ($type == 'phone') {
+            $user->user_phone = $emailOrPhone;
+        }
+        $user->user_password = Hash::make($password);
+        $user->user_account_status = self::STATUS_PENDING;
+        $user->user_registered = now();
+        $user->save();
+        return $user;
+    }
+
+    public static function getUserByEmail($email) {
+        return self::where('user_email', $email)->first();
+    }
+
+    public static function getUserByPhone($phone) {
+        return self::where('user_phone', $phone)->first();
+    }
+
+    public static function getUserById($userId) {
+        return self::where('user_id', $userId)->first();
+    }
+
+    public static function getStatusByUserId($userId) {
+        $user = self::getUserById($userId);
+        if (!$user) {
+            return false;
+        }
+        return $user->user_account_status;
     }
 }
