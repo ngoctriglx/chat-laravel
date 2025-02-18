@@ -22,11 +22,11 @@ class UserDetail extends Model
 
     protected $fillable = [
         'user_id',
-        'user_first_name',
-        'user_last_name',
-        'user_picture',
-        'user_gender',
-        'user_birth_date',
-        'user_status_message',
+        'first_name',
+        'last_name',
+        'picture',
+        'gender',
+        'birth_date',
+        'status_message',
     ];
 }

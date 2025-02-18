@@ -16,10 +16,10 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users', 'user_id')->onDelete('cascade');
             $table->string('first_name');
             $table->string('last_name');
-            $table->string('user_picture')->nullable();
-            $table->enum('user_gender', ['male', 'female'])->default('male');
-            $table->date('user_birth_date');
-            $table->string('user_status_message')->nullable();
+            $table->longText('picture')->nullable();
+            $table->enum('gender', ['male', 'female'])->default('male');
+            $table->date('birth_date');
+            $table->string('status_message')->nullable();
         });
     }
 

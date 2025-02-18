@@ -24,8 +24,8 @@ class UserToken extends Model {
     public $timestamps = false;
 
     const TYPE_TWO_FACTOR_AUTH_REGISTER = 'two_factor_register';
+    const TYPE_ACTIVATION_TOKEN = 'activation_token';
 
-    // const TYPE_ACTIVATION_TOKEN = 'activation_token';
     // const TYPE_AUTH_TOKEN = 'auth_token';
     // const TYPE_REFRESH_TOKEN = 'refresh_token';
     // const TYPE_PASSWORD_RESET_TOKEN = 'password_reset_token';
@@ -74,12 +74,15 @@ class UserToken extends Model {
      * @param int $length
      * @return string
      */
-    public static function generateOtp(int $length = 8): string
-    {
+    public static function generateOtp(int $length = 8): string {
         return str_pad(mt_rand(0, 99999999), $length, ' ', STR_PAD_LEFT);;
     }
 
-    
+    public static function generateToken(int $length = 64): string {
+        return bin2hex(random_bytes($length));
+    }
+
+
     /**
      * Check if a token is valid for a specific user.
      *
@@ -103,7 +106,7 @@ class UserToken extends Model {
         return $userToken;
     }
 
-    
+
     /**
      * Delete a token from the database.
      *

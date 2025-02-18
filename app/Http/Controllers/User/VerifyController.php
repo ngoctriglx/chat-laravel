@@ -63,14 +63,14 @@ class VerifyController extends Controller
 
     private function handleVerification($request, $user)
     {
-        // Logic to handle post-verification actions
         if ($request->action === 'register') {
             $user->user_account_status = User::STATUS_ACTIVE;
             $user->save();
-            return ApiResponseHelper::success('Your account has been activated successfully.');
+            return ApiResponseHelper::success(array(
+                'token' => $user->createToken('auth_token', ['*'], now()->addDays(30))->plainTextToken,
+                'user_id' => $user->user_id
+            ));
         }
-
-        // Additional cases for different actions can be implemented here
 
         return ApiResponseHelper::success('Verification successful.');
     }
