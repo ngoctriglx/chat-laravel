@@ -23,6 +23,8 @@ class UserToken extends Model {
 
     public $timestamps = false;
 
+    const TYPE_TWO_FACTOR_AUTH_LOGIN = 'two_factor_auth_login';
+
     const TYPE_TWO_FACTOR_AUTH_REGISTER = 'two_factor_register';
     const TYPE_ACTIVATION_TOKEN = 'activation_token';
     const TYPE_TWO_FACTOR_PASSWORD_RESET = 'two_factor_password_reset';
@@ -31,7 +33,6 @@ class UserToken extends Model {
     // const TYPE_AUTH_TOKEN = 'auth_token';
     // const TYPE_REFRESH_TOKEN = 'refresh_token';
     // const TYPE_PROVIDER_LOGIN_TOKEN = 'provider_login_token';
-    // const TYPE_TWO_FACTOR_LOGGED = 'two_factor_logged';
 
     /**
      * The attributes that are mass assignable.

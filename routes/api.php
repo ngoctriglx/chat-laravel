@@ -7,9 +7,18 @@ use App\Http\Controllers\User\RegisterController;
 use App\Http\Controllers\User\VerifyController;
 use App\Http\Controllers\User\UpdateController;
 
+Route::prefix('auth')->group(function () {
+    Route::post('send-verification-code', [VerifyController::class, 'sendVerificationCode']);
+    Route::post('verify-code', [VerifyController::class, 'verifyCode']);
+});
+
+Route::prefix('user')->group(function () {
+    
+});
+
 Route::group(['prefix' => 'user'], function () {
+    Route::post('createAndSendToken', [VerifyController::class, 'createAndSendToken']);
     Route::post('register', [RegisterController::class, 'register']);
-    Route::post('sendtoken', [VerifyController::class, 'sendToken']);
     Route::post('verify', [VerifyController::class, 'verify']);
 
     Route::middleware('auth:sanctum')->group(function () {

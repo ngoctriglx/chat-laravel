@@ -98,20 +98,6 @@ class User extends Authenticatable {
         return $this->getAttribute($this->getAuthIdentifierName());
     }
 
-    public static function RegisterNotifications($user, $token) {
-        $template = 'emails.user_2fa_register';
-        $data = [
-            'verificationCode' => $token,
-        ];
-        $subject = 'Verify User Register';
-
-        Mail::to($user->user_email)->send(new NotificationMail(array(
-            'subject' => $subject,
-            'template' => $template,
-            'data' => $data
-        )));
-    }
-
     public static function addUser($emailOrPhone, $password, $type) {
         $user = new self();
         if ($type == 'email') {
