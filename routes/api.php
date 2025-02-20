@@ -9,9 +9,11 @@ use App\Http\Controllers\User\UpdateController;
 
 Route::group(['prefix' => 'user'], function () {
     Route::post('register', [RegisterController::class, 'register']);
+    Route::post('sendtoken', [VerifyController::class, 'sendToken']);
     Route::post('verify', [VerifyController::class, 'verify']);
 
     Route::middleware('auth:sanctum')->group(function () {
+        Route::patch('/{userId}', [UpdateController::class, 'updateUser']);
         Route::patch('/details/{userId}', [UpdateController::class, 'updateUserDetail']);
     });
     // Route::post('login', [AuthController::class, 'login']);

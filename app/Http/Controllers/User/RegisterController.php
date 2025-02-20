@@ -24,7 +24,7 @@ class RegisterController extends Controller{
         try {
             $request->validate([
                 'emailOrPhone' => 'required|string|max:50',
-                'password' => 'string|min:8|max:16',
+                'user_password' => 'string|min:8|max:16',
             ]);
 
             $emailOrPhone = $request->emailOrPhone;
@@ -46,12 +46,12 @@ class RegisterController extends Controller{
             }
 
             if(!$user) {
-                if(!$request->password) {
+                if(!$request->user_password) {
                     return ApiResponseHelper::error('Password is required.', 400);
                 }
-                $user = User::addUser($emailOrPhone, $request->password, $type);
+                $user = User::addUser($emailOrPhone, $request->user_password, $type);
             }else{
-                $user->user_password = Hash::make($request->password);
+                $user->user_password = Hash::make($request->user_password);
                 $user->save();
             }
 
