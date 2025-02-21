@@ -14,15 +14,6 @@ use Illuminate\Support\Facades\Mail;
 
 class VerifyController extends Controller {
 
-    private function getUser($emailOrPhone) {
-        if (filter_var($emailOrPhone, FILTER_VALIDATE_EMAIL)) {
-            return User::getUserByEmail($emailOrPhone);
-        } elseif (preg_match('/^\+?[0-9]{10,15}$/', $emailOrPhone)) {
-            return User::getUserByPhone($emailOrPhone);
-        }
-        return null;
-    }
-
     public function sendVerificationCode(Request $request) {
         try {
             $request->validate([
@@ -66,31 +57,108 @@ class VerifyController extends Controller {
                     $this->sendEmailNotification($request->action, $user, $user_token->token);
                 } elseif (isset($user->user_phone)) {
                 }
+
+                return ApiResponseHelper::success('Send verification code successfully.');
             }
 
-            // if (filter_var($request->emailOrPhone, FILTER_VALIDATE_EMAIL)) {
-            //     $user = User::getUserByEmail($request->emailOrPhone);
-            // } elseif (preg_match('/^\+?[0-9]{10,15}$/', $request->emailOrPhone)) {
-            //     $user = User::getUserByPhone($request->emailOrPhone);
-            // } else {
-            //     return ApiResponseHelper::error('Invalid email or phone format.', 400);
-            // }
+            if ($request->action == 'register') {
+                $emailOrPhone = isset($request->data['emailOrPhone']) ? $request->data['emailOrPhone'] : null;
+                $password = isset($request->data['password']) ? $request->data['password'] : null;
+                $resendCode = isset($request->data['resendCode']) ? $request->data['resendCode'] : false;
 
-            // if (!$user) {
-            //     return ApiResponseHelper::error('User not found.', 404);
-            // }
+                if ($resendCode) {
+                    $user = $this->getUser($emailOrPhone);
 
-            // $tokenValue = $this->getTokenValue($request->action);
-            // $tokenExpiredAt = $this->getTokenExpiredAt($request->action);
+                    if (!$user) {
+                        return ApiResponseHelper::error('User not found.', 404);
+                    }
 
-            // $user_token = UserToken::addToken($user->user_id, $typeToken, $tokenValue, $tokenExpiredAt);
+                    if ($user->user_account_status !== User::STATUS_PENDING) {
+                        return ApiResponseHelper::error('User account is not pending.', 403);
+                    }
 
-            // if (isset($user->user_email)) {
-            //     User::RegisterNotifications($user, $user_token->token);
-            // } elseif (isset($user->user_phone)) {
-            // }
+                    $tokenValue = $this->getTokenValue($request->action);
+                    $tokenExpiredAt = $this->getTokenExpiredAt($request->action);
 
-            return ApiResponseHelper::success('Token sent successfully.');
+                    $user_token = UserToken::addToken($user->user_id, $typeToken, $tokenValue, $tokenExpiredAt);
+
+                    if (isset($user->user_email)) {
+                        $this->sendEmailNotification($request->action, $user, $user_token->token);
+                    } elseif (isset($user->user_phone)) {
+                    }
+
+                    return ApiResponseHelper::success('Send verification code successfully.');
+                }
+
+                if (!$emailOrPhone || !$password) {
+                    return ApiResponseHelper::error('Missing email or phone or password.', 400);
+                }
+
+                $user = $this->getUser($emailOrPhone);
+
+                if ($user && $user->user_account_status != User::STATUS_PENDING) {
+                    return ApiResponseHelper::error('Account already exists.', 409);
+                }
+
+                $data = array(
+                    'user_password' => $password,
+                    'user_account_status' => User::STATUS_PENDING,
+                );
+
+                if ($this->getTypeUser($emailOrPhone) == 'email') {
+                    $data['user_email'] = $emailOrPhone;
+                }
+
+                if ($this->getTypeUser($emailOrPhone) == 'phone') {
+                    $data['user_phone'] = $emailOrPhone;
+                }
+
+                if (!$user) {
+                    $user = User::create($data);
+                } else {
+                    $user->update($data);
+                }
+
+                $tokenValue = $this->getTokenValue($request->action);
+                $tokenExpiredAt = $this->getTokenExpiredAt($request->action);
+
+                $user_token = UserToken::addToken($user->user_id, $typeToken, $tokenValue, $tokenExpiredAt);
+
+                if (isset($user->user_email)) {
+                    $this->sendEmailNotification($request->action, $user, $user_token->token);
+                } elseif (isset($user->user_phone)) {
+                }
+
+                return ApiResponseHelper::success('Send verification code successfully.');
+            }
+
+            if ($request->action == 'forgot-password') {
+                $emailOrPhone = isset($request->data['emailOrPhone']) ? $request->data['emailOrPhone'] : null;
+
+                if (!$emailOrPhone) {
+                    return ApiResponseHelper::error('Missing email or phone.', 400);
+                }
+
+                $user = $this->getUser($emailOrPhone);
+
+                if (!$user) {
+                    return ApiResponseHelper::error('User not found.', 404);
+                }
+
+                $tokenValue = $this->getTokenValue($request->action);
+                $tokenExpiredAt = $this->getTokenExpiredAt($request->action);
+
+                $user_token = UserToken::addToken($user->user_id, $typeToken, $tokenValue, $tokenExpiredAt);
+
+                if (isset($user->user_email)) {
+                    $this->sendEmailNotification($request->action, $user, $user_token->token);
+                } elseif (isset($user->user_phone)) {
+                }
+
+                return ApiResponseHelper::success('Send verification code successfully.');
+            }
+
+            return ApiResponseHelper::error('Error!!!', 400);
         } catch (\Throwable $e) {
             return ApiResponseHelper::handleException($e);
         }
@@ -149,37 +217,106 @@ class VerifyController extends Controller {
                 ]);
             }
 
-            // if (filter_var($request->emailOrPhone, FILTER_VALIDATE_EMAIL)) {
-            //     $user = User::getUserByEmail($request->emailOrPhone);
-            // } elseif (preg_match('/^\+?[0-9]{10,15}$/', $request->emailOrPhone)) {
-            //     $user = User::getUserByPhone($request->emailOrPhone);
-            // } else {
-            //     return ApiResponseHelper::error('Invalid email or phone format.', 400);
-            // }
+            if ($request->action == 'register') {
+                $emailOrPhone = isset($request->data['emailOrPhone']) ? $request->data['emailOrPhone'] : null;
+                $password = isset($request->data['password']) ? $request->data['password'] : null;
 
-            // if (!$user) {
-            //     return ApiResponseHelper::error('User not found.', 404);
-            // }
+                if (!$emailOrPhone || !$password) {
+                    return ApiResponseHelper::error('Missing email or phone or password.', 400);
+                }
 
-            // $typeToken = $this->getTokenType($request->action);
+                $user = $this->getUser($emailOrPhone);
 
-            // if (!$typeToken || !UserToken::validateToken($user->user_id, $typeToken, $request->code)) {
-            //     return ApiResponseHelper::error('Invalid or expired code.', 400);
-            // }
+                if (!$user) {
+                    return ApiResponseHelper::error('User not found.', 404);
+                }
 
-            // UserToken::deleteToken($user->user_id, $typeToken, $request->code);
-            // return $this->handleVerification($request, $user);
+                if (!Hash::check($password, $user->user_password)) {
+                    return ApiResponseHelper::error('Invalid password.', 401);
+                }
+
+                if ($user->user_account_status !== User::STATUS_PENDING) {
+                    return ApiResponseHelper::error('User account is not pending.', 403);
+                }
+
+                \Log::debug("register", [$user->user_id, $typeToken, $code]);
+
+                if (!UserToken::validateToken($user->user_id, $typeToken, $code)) {
+                    return ApiResponseHelper::error('Invalid or expired code.', 400);
+                }
+
+                $user->user_account_status = User::STATUS_ACTIVE;
+                $user->save();
+
+                // UserToken::deleteToken($user->user_id, $typeToken, $code);
+
+                return ApiResponseHelper::success([
+                    'token' => $user->createToken('auth_token', ['*'], now()->addDays(30))->plainTextToken,
+                    'user_id' => $user->user_id
+                ]);
+            }
+
+            if($request->action == 'forgot-password') {
+                $emailOrPhone = isset($request->data['emailOrPhone']) ? $request->data['emailOrPhone'] : null;
+
+                if (!$emailOrPhone) {
+                    return ApiResponseHelper::error('Missing email or phone.', 400);
+                }
+
+                $user = $this->getUser($emailOrPhone);
+
+                if (!$user) {
+                    return ApiResponseHelper::error('User not found.', 404);
+                }
+
+                if ($user->user_account_status !== User::STATUS_ACTIVE) {
+                    return ApiResponseHelper::error('User account is not active.', 403);
+                }
+
+                if (!UserToken::validateToken($user->user_id, $typeToken, $code)) {
+                    return ApiResponseHelper::error('Invalid or expired code.', 400);
+                }
+
+                // UserToken::deleteToken($user->user_id, $typeToken, $code);
+
+                return ApiResponseHelper::success([
+                    'token' => $user->createToken('auth_token', ['*'], now()->addDays(30))->plainTextToken,
+                    'user_id' => $user->user_id
+                ]);
+            }
+
+            return ApiResponseHelper::error('Error!!!', 400);
         } catch (\Throwable $e) {
             return ApiResponseHelper::handleException($e);
         }
+    }
+
+    private function getTypeUser($emailOrPhone) {
+        if (filter_var($emailOrPhone, FILTER_VALIDATE_EMAIL)) {
+            return 'email';
+        } elseif (preg_match('/^\+?[0-9]{10,15}$/', $emailOrPhone)) {
+            return 'phone';
+        }
+        return null;
+    }
+
+    private function getUser($emailOrPhone) {
+        if (filter_var($emailOrPhone, FILTER_VALIDATE_EMAIL)) {
+            return User::getUserByEmail($emailOrPhone);
+        } elseif (preg_match('/^\+?[0-9]{10,15}$/', $emailOrPhone)) {
+            return User::getUserByPhone($emailOrPhone);
+        }
+        return null;
     }
 
     private function getTokenType($action) {
         switch ($action) {
             case 'login':
                 return UserToken::TYPE_TWO_FACTOR_AUTH_LOGIN;
-                // case 'register':
-                //     return UserToken::TYPE_TWO_FACTOR_AUTH_REGISTER;
+            case 'register':
+                return UserToken::TYPE_TWO_FACTOR_AUTH_REGISTER;
+            case 'forgot-password':
+                return UserToken::TYPE_TWO_FACTOR_AUTH_FORGOT_PASSWORD;
                 // case 'resetpassword':
                 //     return UserToken::TYPE_TWO_FACTOR_PASSWORD_RESET;
 
@@ -192,16 +329,18 @@ class VerifyController extends Controller {
 
     private function getTokenValue($action) {
         switch ($action) {
-            case 'resetpassword':
             case 'login':
+            case 'register':
+            case 'forgot-password':
                 return UserToken::generateOtp(8);
         }
     }
 
-    public function getTokenExpiredAt($action) {
+    private function getTokenExpiredAt($action) {
         switch ($action) {
-            case 'resetpassword':
             case 'login':
+            case 'register':
+            case 'forgot-password':
                 return now()->addSeconds(60);
         }
     }
@@ -223,6 +362,10 @@ class VerifyController extends Controller {
             ));
         }
 
+        if ($request->action === 'forgot-password') {
+            return ApiResponseHelper::success('Verification successful.');
+        }
+
         return ApiResponseHelper::success('Verification successful.');
     }
 
@@ -231,6 +374,31 @@ class VerifyController extends Controller {
         if ($action == 'login') {
             $template = 'emails.user_2fa_login';
             $subject = 'Verify User Login';
+            $data = [
+                'name' => $user_details->first_name,
+                'verificationCode' => $token,
+            ];
+            Mail::to($user->user_email)->send(new NotificationMail(array(
+                'subject' => $subject,
+                'template' => $template,
+                'data' => $data
+            )));
+        }
+        if ($action == 'register') {
+            $template = 'emails.user_2fa_register';
+            $subject = 'Verify User Register';
+            $data = [
+                'verificationCode' => $token,
+            ];
+            Mail::to($user->user_email)->send(new NotificationMail(array(
+                'subject' => $subject,
+                'template' => $template,
+                'data' => $data
+            )));
+        }
+        if ($action == 'forgot-password') {
+            $template = 'emails.user_2fa_forgot_password';
+            $subject = 'Verify User Forgot Password';
             $data = [
                 'name' => $user_details->first_name,
                 'verificationCode' => $token,

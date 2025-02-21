@@ -24,10 +24,11 @@ class UserToken extends Model {
     public $timestamps = false;
 
     const TYPE_TWO_FACTOR_AUTH_LOGIN = 'two_factor_auth_login';
+    const TYPE_TWO_FACTOR_AUTH_REGISTER = 'two_factor_auth_register';
+    const TYPE_TWO_FACTOR_AUTH_FORGOT_PASSWORD = 'two_factor_auth_forgot_password';
 
-    const TYPE_TWO_FACTOR_AUTH_REGISTER = 'two_factor_register';
-    const TYPE_ACTIVATION_TOKEN = 'activation_token';
-    const TYPE_TWO_FACTOR_PASSWORD_RESET = 'two_factor_password_reset';
+    // const TYPE_ACTIVATION_TOKEN = 'activation_token';
+    // const TYPE_TWO_FACTOR_PASSWORD_RESET = 'two_factor_password_reset';
     
     // const TYPE_PASSWORD_RESET_TOKEN = 'password_reset_token';
     // const TYPE_AUTH_TOKEN = 'auth_token';

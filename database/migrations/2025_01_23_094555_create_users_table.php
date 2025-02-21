@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('user_password');
             $table->enum('user_account_status', ['active', 'pending', 'suspended', 'banned', 'deactivated'])->default('pending');
             $table->string('user_banned_reason')->nullable();
-            $table->timestamp('user_registered');
+            $table->timestamp('user_registered')->default(DB::raw('CURRENT_TIMESTAMP'));
             $table->softDeletes();
         });
     }
