@@ -11,6 +11,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 
 class User extends Authenticatable {
@@ -98,18 +99,8 @@ class User extends Authenticatable {
         return $this->getAttribute($this->getAuthIdentifierName());
     }
 
-    public static function addUser($emailOrPhone, $password, $type) {
-        $user = new self();
-        if ($type == 'email') {
-            $user->user_email = $emailOrPhone;
-        } elseif ($type == 'phone') {
-            $user->user_phone = $emailOrPhone;
-        }
-        $user->user_password = Hash::make($password);
-        $user->user_account_status = self::STATUS_PENDING;
-        $user->user_registered = now();
-        $user->save();
-        return $user;
+    public function userDetail(): HasOne {
+        return $this->hasOne(UserDetail::class, 'user_id', 'user_id');
     }
 
     public static function getUserByEmail($email) {

@@ -11,34 +11,7 @@ use App\Models\UserToken;
 use App\Models\UserDetail;
 use Illuminate\Validation\Rule;
 
-class UpdateController extends Controller {
-
-    private function validateUser(Request $request) {
-        return $request->validate([
-            'user_email' => 'sometimes|email|max:255',
-            'user_phone' => 'sometimes|numeric|digits_between:10,15',
-            'user_password' => 'sometimes|string|min:8|max:16',
-        ]);
-    }
-
-    public function updateUser(Request $request, $id) {
-        try {
-            $user = User::find($id);
-
-            if (!$user) {
-                return ApiResponseHelper::error('User not found.', 404);
-            }
-            
-            $validatedData = $this->validateUser($request);
-
-            $user = User::find($id)->update($validatedData);
-
-            return ApiResponseHelper::success('User updated successfully.');
-        } catch (\Throwable $e) {
-            return ApiResponseHelper::handleException($e);
-        }
-    }
-
+class UserDetailController extends Controller {
     private function validateUserDetail(Request $request) {
         return $request->validate([
             'first_name' => 'sometimes|string|max:255',
@@ -61,7 +34,7 @@ class UpdateController extends Controller {
 
             $validatedData = $this->validateUserDetail($request);
 
-            if(!empty($validatedData['picture'])) {
+            if (!empty($validatedData['picture'])) {
                 $imageUrl = Base64ImageHelper::saveBase64Image($validatedData['picture'], 'user_avatars');
 
                 if ($imageUrl) {
