@@ -12,7 +12,7 @@ use App\Models\UserDetail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 
-class VerifyController extends Controller {
+class AuthController extends Controller {
 
     public function sendVerificationCode(Request $request) {
         try {
@@ -34,7 +34,7 @@ class VerifyController extends Controller {
                     return ApiResponseHelper::error('Missing email or phone or password.', 400);
                 }
 
-                $user = $this->getUser($emailOrPhone);
+                $user = $this->getUserByEmailOrPhone($emailOrPhone);
 
                 if (!$user) {
                     return ApiResponseHelper::error('User not found.', 404);
@@ -67,7 +67,7 @@ class VerifyController extends Controller {
                 $resendCode = isset($request->data['resendCode']) ? $request->data['resendCode'] : false;
 
                 if ($resendCode) {
-                    $user = $this->getUser($emailOrPhone);
+                    $user = $this->getUserByEmailOrPhone($emailOrPhone);
 
                     if (!$user) {
                         return ApiResponseHelper::error('User not found.', 404);
@@ -94,7 +94,7 @@ class VerifyController extends Controller {
                     return ApiResponseHelper::error('Missing email or phone or password.', 400);
                 }
 
-                $user = $this->getUser($emailOrPhone);
+                $user = $this->getUserByEmailOrPhone($emailOrPhone);
 
                 if ($user && $user->user_account_status != User::STATUS_PENDING) {
                     return ApiResponseHelper::error('Account already exists.', 409);
@@ -139,7 +139,7 @@ class VerifyController extends Controller {
                     return ApiResponseHelper::error('Missing email or phone.', 400);
                 }
 
-                $user = $this->getUser($emailOrPhone);
+                $user = $this->getUserByEmailOrPhone($emailOrPhone);
 
                 if (!$user) {
                     return ApiResponseHelper::error('User not found.', 404);
@@ -191,7 +191,7 @@ class VerifyController extends Controller {
                     return ApiResponseHelper::error('Missing email or phone or password.', 400);
                 }
 
-                $user = $this->getUser($emailOrPhone);
+                $user = $this->getUserByEmailOrPhone($emailOrPhone);
 
                 if (!$user) {
                     return ApiResponseHelper::error('User not found.', 404);
@@ -225,7 +225,7 @@ class VerifyController extends Controller {
                     return ApiResponseHelper::error('Missing email or phone or password.', 400);
                 }
 
-                $user = $this->getUser($emailOrPhone);
+                $user = $this->getUserByEmailOrPhone($emailOrPhone);
 
                 if (!$user) {
                     return ApiResponseHelper::error('User not found.', 404);
@@ -263,7 +263,7 @@ class VerifyController extends Controller {
                     return ApiResponseHelper::error('Missing email or phone.', 400);
                 }
 
-                $user = $this->getUser($emailOrPhone);
+                $user = $this->getUserByEmailOrPhone($emailOrPhone);
 
                 if (!$user) {
                     return ApiResponseHelper::error('User not found.', 404);
@@ -300,10 +300,10 @@ class VerifyController extends Controller {
         return null;
     }
 
-    private function getUser($emailOrPhone) {
+    private function getUserByEmailOrPhone($emailOrPhone) {
         if (filter_var($emailOrPhone, FILTER_VALIDATE_EMAIL)) {
             return User::getUserByEmail($emailOrPhone);
-        } elseif (preg_match('/^\+?[0-9]{10,15}$/', $emailOrPhone)) {
+        } elseif (preg_match('/^\+[1-9]\d{9,14}$/', $emailOrPhone)) {
             return User::getUserByPhone($emailOrPhone);
         }
         return null;
