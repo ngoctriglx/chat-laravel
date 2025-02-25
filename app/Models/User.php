@@ -99,6 +99,16 @@ class User extends Authenticatable {
         return $this->getAttribute($this->getAuthIdentifierName());
     }
 
+    /**
+     * Serialize the date format.
+     *
+     * @param  \DateTimeInterface $date
+     * @return string
+     */
+    protected function serializeDate(\DateTimeInterface $date): string {
+        return $date->format('Y-m-d H:i:s');
+    }
+
     public function userDetail(): HasOne {
         return $this->hasOne(UserDetail::class, 'user_id', 'user_id');
     }

@@ -28,5 +28,6 @@ class UserDetail extends Model
         'gender',
         'birth_date',
         'status_message',
+        'background_image',
     ];
 }

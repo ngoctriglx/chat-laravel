@@ -5,10 +5,8 @@ namespace App\Helpers;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 
-class Base64ImageHelper
-{
-    public static function saveBase64Image(string $base64Image, string $folder = 'uploads', bool $returnUrl = true): ?string
-    {
+class Base64ImageHelper {
+    public static function saveBase64Image(string $base64Image, string|null $folder = 'uploads', bool $returnUrl = true): ?string {
         if (!preg_match('/^data:image\/(\w+);base64,/', $base64Image, $matches)) {
             return null;
         }
@@ -21,7 +19,7 @@ class Base64ImageHelper
             return null;
         }
 
-        $fileName = $folder . '/' . Str::random(10) . time() . '.' . $imageType;
+        $fileName =  !$folder ?: $folder . '/' . Str::random(10) . time() . '.' . $imageType;
 
         Storage::disk('public')->put($fileName, $imageData);
 

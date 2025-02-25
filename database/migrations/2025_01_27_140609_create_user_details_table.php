@@ -20,6 +20,7 @@ return new class extends Migration
             $table->enum('gender', ['male', 'female'])->default('male');
             $table->date('birth_date');
             $table->string('status_message')->nullable();
+            $table->longText('background_image')->nullable();
         });
     }
 

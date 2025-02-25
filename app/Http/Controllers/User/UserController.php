@@ -19,12 +19,6 @@ class UserController extends Controller {
         }
         $user->load('userDetail');
         $userData  = $user->toArray();
-        if (!empty($userData['user_detail']['picture'])) {
-            $userData['user_detail']['picture'] = url($userData['user_detail']['picture']);
-        }
-        if (!empty($userData['user_registered'])) {
-            $userData['user_registered'] = \Carbon\Carbon::parse($userData['user_registered'])->format('Y-m-d H:i:s');
-        }
         return ApiResponseHelper::success($userData);
     }
 
@@ -65,13 +59,14 @@ class UserController extends Controller {
 
     public function searchUser(Request $request, $dataQuery) {
         try {
-            $user = $this->getUserByEmailOrPhone($dataQuery);
-            if (!$user) {
+            $user = $request->user();
+            $user_search = $this->getUserByEmailOrPhone($dataQuery);
+            if (!$user_search || $user_search->user_id == $user->user_id) {
                 return ApiResponseHelper::error('User not found.', 404);
             }
-            $user->load('userDetail');
-            $user = $user->toArray();
-            return ApiResponseHelper::success($user);
+            $user_search->load('userDetail');
+            $user_search = $user_search->toArray();
+            return ApiResponseHelper::success($user_search);
         } catch (\Throwable $e) {
             return ApiResponseHelper::handleException($e);
         }
