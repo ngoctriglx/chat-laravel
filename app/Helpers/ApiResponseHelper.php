@@ -12,6 +12,7 @@ class ApiResponseHelper
     {
         $response = ['success' => true];
         $response = array_merge($response, is_array($data) ? ['data' => $data] : ['message' => $data]);
+        \Log::info($response);
         return response()->json($response, $status);
     }
 

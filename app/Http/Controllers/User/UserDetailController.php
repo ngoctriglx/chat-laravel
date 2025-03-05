@@ -12,7 +12,8 @@ use App\Models\UserToken;
 use App\Models\UserDetail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
-use Intervention\Image\Laravel\Facades\Image;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class UserDetailController extends Controller {
     private function validateUserDetail(Request $request) {
@@ -50,16 +51,18 @@ class UserDetailController extends Controller {
 
             $userDetail->fill($validatedData);
             $userDetail->save();
-
-            return ApiResponseHelper::success('User details updated successfully.');
+            return ApiResponseHelper::success($userDetail->toArray());
         } catch (\Throwable $e) {
             return ApiResponseHelper::handleException($e);
         }
     }
 
     public function crop_picture($image) {
-        $image = Image::read($upload)->resize(600, 600);
-        $path = Storage::putFile('avatars', $image, 'public');
+        $file_name = $image->hashName();
+        $manager = new ImageManager(Driver::class);
+        $image = $manager->read($image)->cover(300, 300)->encode();
+        $path = "avatars/$file_name";
+        Storage::disk('public')->put($path, (string) $image);
         return $path;
     }
 }

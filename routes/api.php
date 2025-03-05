@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\User\UserDetailController;
-use App\Http\Controllers\User\AuthController;
+use App\Http\Controllers\Auth\AuthController;
 use App\Models\User;
 
 Route::prefix('auth')->group(function () {

@@ -46,7 +46,8 @@ class User extends Authenticatable {
         'user_password',
         'user_account_status',
         'user_banned_reason',
-        'user_registered'
+        'user_registered',
+        'deleted_at'
     ];
 
     /**
@@ -58,6 +59,7 @@ class User extends Authenticatable {
         'user_password',
         'user_account_status',
         'user_banned_reason',
+        'deleted_at'
     ];
 
     /**
