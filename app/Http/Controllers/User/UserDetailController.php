@@ -45,7 +45,7 @@ class UserDetailController extends Controller {
             }
 
             if($request->hasFile('background_image')) {
-                $path = $request->file('background_image')->store('backgrounds', 'public');
+                $path = $this->crop_background_image($request->file('background_image'));
                 $validatedData['background_image'] = url(Storage::url($path));
             }
 
@@ -60,8 +60,17 @@ class UserDetailController extends Controller {
     public function crop_picture($image) {
         $file_name = $image->hashName();
         $manager = new ImageManager(Driver::class);
-        $image = $manager->read($image)->cover(300, 300)->encode();
+        $image = $manager->read($image)->cover(600, 600)->encode();
         $path = "avatars/$file_name";
+        Storage::disk('public')->put($path, (string) $image);
+        return $path;
+    }
+
+    public function crop_background_image($image) {
+        $file_name = $image->hashName();
+        $manager = new ImageManager(Driver::class);
+        $image = $manager->read($image)->cover(800, 600)->encode();
+        $path = "backgrounds/$file_name";
         Storage::disk('public')->put($path, (string) $image);
         return $path;
     }

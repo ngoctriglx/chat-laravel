@@ -73,6 +73,7 @@ return [
     'links' => [
         // public_path('storage') => storage_path('app/public'),
         base_path('storage/avatars') => storage_path('app/public/avatars'),
+        base_path('storage/backgrounds') => storage_path('app/public/backgrounds'),
     ],
 
 ];

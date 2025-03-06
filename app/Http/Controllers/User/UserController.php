@@ -66,7 +66,17 @@ class UserController extends Controller {
             }
             $user_search->load('userDetail');
             $user_search = $user_search->toArray();
-            return ApiResponseHelper::success($user_search);
+            $data = [
+                'user_email' => $user_search['user_email'],
+                'user_phone' => $user_search['user_phone'],
+                'first_name' => $user_search['user_detail']['first_name'],
+                'last_name' => $user_search['user_detail']['last_name'],
+                'picture' => $user_search['user_detail']['picture'],
+                'background_image' => $user_search['user_detail']['background_image'],
+                'birth_date' => $user_search['user_detail']['birth_date'],
+                'status_message' => $user_search['user_detail']['status_message'],
+            ];
+            return ApiResponseHelper::success($data);
         } catch (\Throwable $e) {
             return ApiResponseHelper::handleException($e);
         }

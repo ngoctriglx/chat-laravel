@@ -26,4 +26,5 @@ yarn-error.log
 frankenphp
 frankenphp-worker.php
 /phpmyadmin
-/node_modules
+storage/avatars
+storage/backgrounds
