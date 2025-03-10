@@ -9,12 +9,12 @@ return new class extends Migration {
      * Run the migrations.
      */
     public function up(): void {
-        Schema::create('user_settings', function (Blueprint $table) {
-            $table->id('setting_id');
+        Schema::create('friends', function (Blueprint $table) {
+            $table->id();
             $table->foreignId('user_id')->constrained('users', 'user_id')->onDelete('cascade');
-            $table->enum('theme_mode', ['light', 'dark', 'system'])->default('light');
-            $table->string('language', 10);
-            $table->enum('allow_friend_requests', ['everyone', 'friends_of_friends', 'contacts_only', 'nobody'])->default('everyone');
+            $table->foreignId('friend_id')->constrained('users', 'user_id')->onDelete('cascade');
+            $table->timestamp('created_at')->useCurrent();
+            $table->unique(['user_id', 'friend_id']);
         });
     }
 
@@ -22,6 +22,6 @@ return new class extends Migration {
      * Reverse the migrations.
      */
     public function down(): void {
-        Schema::dropIfExists('user_settings');
+        Schema::dropIfExists('friends');
     }
 };

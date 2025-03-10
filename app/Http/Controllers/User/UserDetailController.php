@@ -10,6 +10,7 @@ use App\Helpers\UploadFiles;
 use App\Models\User;
 use App\Models\UserToken;
 use App\Models\UserDetail;
+use App\Services\UserService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Intervention\Image\ImageManager;
@@ -28,8 +29,10 @@ class UserDetailController extends Controller {
         ]);
     }
 
-    public function updateUserDetail(Request $request, $id) {
+    public function updateUserDetail(Request $request, UserService $userService) {
         try {
+            $user = $request->user();
+            $id = $user->user_id;
             $userDetail = UserDetail::where('user_id', $id)->first();
 
             if (!$userDetail) {
@@ -51,7 +54,9 @@ class UserDetailController extends Controller {
 
             $userDetail->fill($validatedData);
             $userDetail->save();
-            return ApiResponseHelper::success($userDetail->toArray());
+
+            $userInfo = $userService->getUserInformation($id);
+            return ApiResponseHelper::success($userInfo);
         } catch (\Throwable $e) {
             return ApiResponseHelper::handleException($e);
         }

@@ -9,16 +9,18 @@ use App\Helpers\ApiResponseHelper;
 use App\Models\User;
 use App\Models\UserToken;
 use App\Models\UserDetail;
+use App\Services\FriendService;
+use App\Services\UserService;
 
 class UserController extends Controller {
 
-    public function getUser(Request $request) {
+    public function getUser(Request $request, UserService $userService) {
         $user = $request->user();
         if (!$user) {
             return ApiResponseHelper::error('User not found.', 404);
         }
-        $user->load('userDetail');
-        $userData  = $user->toArray();
+        $userId = $user->user_id;
+        $userData = $userService->getUserInformation($userId);
         return ApiResponseHelper::success($userData);
     }
 
@@ -57,37 +59,25 @@ class UserController extends Controller {
         }
     }
 
-    public function searchUser(Request $request, $dataQuery) {
+    public function searchUser(Request $request, $dataQuery, UserService $userService, FriendService $friendService) {
         try {
             $user = $request->user();
-            $user_search = $this->getUserByEmailOrPhone($dataQuery);
-            if (!$user_search || $user_search->user_id == $user->user_id) {
+            $userQuery = $userService->getUserByAny($dataQuery);
+            if (!$userQuery || $userQuery->user_id == $user->user_id) {
                 return ApiResponseHelper::error('User not found.', 404);
             }
-            $user_search->load('userDetail');
-            $user_search = $user_search->toArray();
-            $data = [
-                'user_email' => $user_search['user_email'],
-                'user_phone' => $user_search['user_phone'],
-                'first_name' => $user_search['user_detail']['first_name'],
-                'last_name' => $user_search['user_detail']['last_name'],
-                'picture' => $user_search['user_detail']['picture'],
-                'background_image' => $user_search['user_detail']['background_image'],
-                'birth_date' => $user_search['user_detail']['birth_date'],
-                'status_message' => $user_search['user_detail']['status_message'],
-            ];
-            return ApiResponseHelper::success($data);
+
+            $userQueryId = $userQuery->user_id;
+            $userQueryData = $userService->getUserInformation($userQueryId);
+
+            $relationship_status = $friendService->getFriendshipStatus($user->user_id, $userQueryId);
+
+            $userQueryData['relationship_status'] = $relationship_status;
+
+            return ApiResponseHelper::success($userQueryData);
         } catch (\Throwable $e) {
             return ApiResponseHelper::handleException($e);
         }
     }
-
-    private function getUserByEmailOrPhone($emailOrPhone) {
-        if (filter_var($emailOrPhone, FILTER_VALIDATE_EMAIL)) {
-            return User::getUserByEmail($emailOrPhone);
-        } elseif (preg_match('/^\+[1-9]\d{9,14}$/', $emailOrPhone)) {
-            return User::getUserByPhone($emailOrPhone);
-        }
-        return null;
-    }
+    
 }

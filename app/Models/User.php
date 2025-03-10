@@ -115,23 +115,5 @@ class User extends Authenticatable {
         return $this->hasOne(UserDetail::class, 'user_id', 'user_id');
     }
 
-    public static function getUserByEmail($email) {
-        return self::where('user_email', $email)->first();
-    }
-
-    public static function getUserByPhone($phone) {
-        return self::where('user_phone', $phone)->first();
-    }
-
-    public static function getUserById($userId) {
-        return self::where('user_id', $userId)->first();
-    }
-
-    public static function getStatusByUserId($userId) {
-        $user = self::getUserById($userId);
-        if (!$user) {
-            return false;
-        }
-        return $user->user_account_status;
-    }
+    
 }

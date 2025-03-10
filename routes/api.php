@@ -6,6 +6,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\User\UserDetailController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\User\FriendRequestController;
 use App\Models\User;
 
 Route::prefix('auth')->group(function () {
@@ -16,9 +17,10 @@ Route::prefix('auth')->group(function () {
 Route::prefix('user')->middleware('auth:sanctum')->group(function () {
     Route::post('logout', [UserController::class, 'logout']);
     Route::get('me', [UserController::class, 'getUser']);
-    Route::patch('{userId}', [UserController::class, 'updateUser']);
-    Route::patch('details/{userId}', [UserDetailController::class, 'updateUserDetail']);
-    Route::post('search/{query}', [UserController::class, 'searchUser']);
+    Route::patch('me', [UserController::class, 'updateUser']);
+    Route::patch('me/details', [UserDetailController::class, 'updateUserDetail']);
+    Route::get('search/{query}', [UserController::class, 'searchUser']);
+    Route::post('friend-request', [FriendRequestController::class, 'sendRequest']);
 });
 
 
