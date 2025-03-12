@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Events\TestSocket;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Helpers\Base64ImageHelper;
@@ -21,6 +22,7 @@ class UserController extends Controller {
         }
         $userId = $user->user_id;
         $userData = $userService->getUserInformation($userId);
+        broadcast(new TestSocket())->toOthers();
         return ApiResponseHelper::success($userData);
     }
 

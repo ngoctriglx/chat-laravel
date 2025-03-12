@@ -6,7 +6,7 @@ use App\Models\FriendRequest;
 
 class FriendService {
 
-    public function getFriendshipStatus($userId, $otherUserId) {
+    public function getFriendship($userId, $otherUserId) {
         if ($userId == $otherUserId) {
             return 'self';
         }
@@ -22,7 +22,21 @@ class FriendService {
             ->first();
 
         if (!$friendRequest) {
-            return '';
+            return null;
+        }
+
+        return $friendRequest;
+    }
+
+    public function getFriendshipStatus($userId, $otherUserId) {
+        if ($userId == $otherUserId) {
+            return 'self';
+        }
+
+        $friendRequest = $this->getFriendship($userId, $otherUserId);
+
+        if (!$friendRequest) {
+            return null;
         }
 
         switch ($friendRequest->status) {

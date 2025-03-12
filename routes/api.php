@@ -12,6 +12,9 @@ use App\Models\User;
 Route::prefix('auth')->group(function () {
     Route::post('send-verification-code', [AuthController::class, 'sendVerificationCode']);
     Route::post('verify-code', [AuthController::class, 'verifyCode']);
+    Route::post('broadcasting', function (Request $request) {
+        return Broadcast::auth($request);
+    })->middleware('auth:sanctum');
 });
 
 Route::prefix('user')->middleware('auth:sanctum')->group(function () {
@@ -20,8 +23,11 @@ Route::prefix('user')->middleware('auth:sanctum')->group(function () {
     Route::patch('me', [UserController::class, 'updateUser']);
     Route::patch('me/details', [UserDetailController::class, 'updateUserDetail']);
     Route::get('search/{query}', [UserController::class, 'searchUser']);
+    // FriendRequestController
     Route::post('friend-request', [FriendRequestController::class, 'sendRequest']);
+    Route::post('friend-request/revoke', [FriendRequestController::class, 'revokeRequest']);
+    Route::post('friend-request/decline', [FriendRequestController::class, 'declineRequest']);
 });
 
 
-// Route::post('/send-message', [ChatController::class, 'sendMessage']);
+Route::post('/send-message', [ChatController::class, 'sendMessage']);

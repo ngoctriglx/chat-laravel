@@ -44,8 +44,6 @@ class UserService {
             return $this->getUserByEmail($query);
         } elseif (preg_match('/^\+?[0-9]{10,15}$/', $query)) {
             return  $this->getUserByPhone($query);
-        } elseif (is_numeric($query)) {
-            return $this->getUserById($query);
         }
         return null;
     }

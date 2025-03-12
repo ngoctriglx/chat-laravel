@@ -33,7 +33,7 @@ class UserTokenService {
     }
 
     public function generateOtp(int $length = 8): string {
-        return str_pad(mt_rand(0, 99999999), $length, ' ', STR_PAD_LEFT);;
+        return str_pad(mt_rand(0, pow(10, $length) - 1), $length, '0', STR_PAD_LEFT);
     }
 
     public function generateToken(int $length = 64): string {
