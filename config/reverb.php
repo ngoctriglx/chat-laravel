@@ -33,9 +33,7 @@ return [
             'port' => env('REVERB_SERVER_PORT', 8080),
             'hostname' => env('REVERB_HOST'),
             'options' => [
-                'tls' => [
-                    
-                ],
+                'tls' => [],
             ],
             'max_request_size' => env('REVERB_MAX_REQUEST_SIZE', 10_000),
             'scaling' => [
@@ -81,6 +79,14 @@ return [
                     'port' => env('REVERB_PORT', 443),
                     'scheme' => env('REVERB_SCHEME', 'https'),
                     'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
+                    'tls' => [
+                        'local_cert'        => '/etc/ssl/chat.dev/server.pem',
+                        'peer_fingerprint'  => openssl_x509_fingerprint(file_get_contents('/etc/ssl/chat.dev/server.crt')),
+                        'verify_peer'       => false,
+                        'allow_self_signed' => true,
+                        'verify_peer_name'  => false,
+                        'verify_depth'      => 0,
+                    ],
                 ],
                 'allowed_origins' => ['*'],
                 'ping_interval' => env('REVERB_APP_PING_INTERVAL', 60),

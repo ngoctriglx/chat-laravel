@@ -12,12 +12,12 @@ use App\Models\User;
 Route::prefix('auth')->group(function () {
     Route::post('send-verification-code', [AuthController::class, 'sendVerificationCode']);
     Route::post('verify-code', [AuthController::class, 'verifyCode']);
-    Route::post('broadcasting', function (Request $request) {
-        return Broadcast::auth($request);
-    })->middleware('auth:sanctum');
 });
 
 Route::prefix('user')->middleware('auth:sanctum')->group(function () {
+    Route::post('broadcasting', function (Request $request) {
+        return Broadcast::auth($request);
+    })->middleware('auth:sanctum');
     Route::post('logout', [UserController::class, 'logout']);
     Route::get('me', [UserController::class, 'getUser']);
     Route::patch('me', [UserController::class, 'updateUser']);
