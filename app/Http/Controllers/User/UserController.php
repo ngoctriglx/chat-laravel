@@ -22,7 +22,6 @@ class UserController extends Controller {
         }
         $userId = $user->user_id;
         $userData = $userService->getUserInformation($userId);
-        broadcast(new TestSocket());
         return ApiResponseHelper::success($userData);
     }
 

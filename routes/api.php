@@ -6,8 +6,12 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\User\UserDetailController;
 use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\User\FriendRequestController;
+use App\Http\Controllers\User\FriendController;
 use App\Models\User;
+
+Route::post('broadcasting', function (Request $request) {
+    return Broadcast::auth($request);
+})->middleware('auth:sanctum');
 
 Route::prefix('auth')->group(function () {
     Route::post('send-verification-code', [AuthController::class, 'sendVerificationCode']);
@@ -15,18 +19,16 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::prefix('user')->middleware('auth:sanctum')->group(function () {
-    Route::post('broadcasting', function (Request $request) {
-        return Broadcast::auth($request);
-    })->middleware('auth:sanctum');
+   
     Route::post('logout', [UserController::class, 'logout']);
     Route::get('me', [UserController::class, 'getUser']);
     Route::patch('me', [UserController::class, 'updateUser']);
     Route::patch('me/details', [UserDetailController::class, 'updateUserDetail']);
     Route::get('search/{query}', [UserController::class, 'searchUser']);
-    // FriendRequestController
-    Route::post('friend-request', [FriendRequestController::class, 'sendRequest']);
-    Route::post('friend-request/revoke', [FriendRequestController::class, 'revokeRequest']);
-    Route::post('friend-request/decline', [FriendRequestController::class, 'declineRequest']);
+    // FriendController
+    Route::post('friend-request', [FriendController::class, 'sendRequest']);
+    Route::post('friend-request/revoke', [FriendController::class, 'revokeRequest']);
+    Route::post('friend-request/decline', [FriendController::class, 'declineRequest']);
 });
 
 

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\User;
 
-use App\Events\FriendRequestEvent;
+use App\Events\FriendEvent;
 use App\Helpers\ApiResponseHelper;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -11,10 +11,10 @@ use App\Models\User;
 use App\Services\FriendService;
 use Illuminate\Support\Facades\RateLimiter;
 
-class FriendRequestController extends Controller {
+class FriendController extends Controller {
     public function sendRequest(Request $request, FriendService $friendService) {
         try {
-            if (RateLimiter::tooManyAttempts('friend-requests:' .  $request->user()->id, 5)) {
+            if (RateLimiter::tooManyAttempts('friend-request:' .  $request->user()->id, 5)) {
                 return response()->json(['message' => 'Too many requests. Try again later.'], 429);
             }
 
@@ -45,7 +45,7 @@ class FriendRequestController extends Controller {
                     return ApiResponseHelper::success('Friend request resent.');
                 } elseif ($relationship_status === 'blocked') {
                     return ApiResponseHelper::error('You cannot send friend requests.', 400);
-                }else{
+                } else {
                     return ApiResponseHelper::error('An error occurred.', 400);
                 }
             } else {
@@ -54,7 +54,7 @@ class FriendRequestController extends Controller {
                     'receiver_id' => $receiverId,
                     'status' => FriendRequest::STATUS_PENDING,
                 ]);
-                broadcast(new FriendRequestEvent($receiverId, $senderId, 'sent'))->toOthers();
+                broadcast(new FriendEvent('friend-request', $receiverId, $senderId))->toOthers();
                 return ApiResponseHelper::success('Friend request sent.', 201);
             }
         } catch (\Throwable $e) {
@@ -65,7 +65,7 @@ class FriendRequestController extends Controller {
     public function revokeRequest(Request $request) {
         try {
             $request->validate(['receiver_id' => 'required|integer']);
-            
+
             $user = $request->user();
             $receiverId = $request->receiver_id;
 
@@ -85,7 +85,7 @@ class FriendRequestController extends Controller {
     public function declineRequest(Request $request) {
         try {
             $request->validate(['sender_id' => 'required|integer']);
-            
+
             $user = $request->user();
             $senderId = $request->sender_id;
 
@@ -101,5 +101,4 @@ class FriendRequestController extends Controller {
             return ApiResponseHelper::handleException($e);
         }
     }
-
 }

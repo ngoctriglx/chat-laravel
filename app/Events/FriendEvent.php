@@ -10,7 +10,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class FriendRequestEvent  implements ShouldBroadcast {
+class FriendEvent implements ShouldBroadcast {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $receiverId;
@@ -20,7 +20,7 @@ class FriendRequestEvent  implements ShouldBroadcast {
     /**
      * Create a new event instance.
      */
-    public function __construct($receiverId, $senderId, $action) {
+    public function __construct($action, $receiverId, $senderId) {
         $this->receiverId = $receiverId;
         $this->senderId = $senderId;
         $this->action = $action;
@@ -33,7 +33,7 @@ class FriendRequestEvent  implements ShouldBroadcast {
      */
     public function broadcastOn(): array {
         return [
-            new PrivateChannel('friend-request.' . $this->receiverId),
+            new PrivateChannel('friend-events'),
         ];
     }
 
@@ -43,6 +43,12 @@ class FriendRequestEvent  implements ShouldBroadcast {
      * @return string
      */
     public function broadcastAs() {
-        return 'friend-request-event';
+        return "friend-event.{$this->action}.{$this->receiverId}";
+    }
+
+    public function broadcastWith() {
+        return [
+            'sender_id' => $this->senderId
+        ];
     }
 }

@@ -6,10 +6,6 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
-Broadcast::channel('friend-request.{receiverId}', function () {
-    return true;
-});
-
-Broadcast::channel('test-socket', function () {
+Broadcast::channel('friend-events', function ($user) {
     return true;
 });
