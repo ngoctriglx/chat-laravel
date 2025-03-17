@@ -44,8 +44,6 @@ class FriendService {
                 return 'friends';
             case FriendRequest::STATUS_PENDING:
                 return $friendRequest->sender_id == $userId ? 'request_sent' : 'request_received';
-            case FriendRequest::STATUS_DECLINED:
-                return 'declined';
             case FriendRequest::STATUS_BLOCKED:
                 return 'blocked';
             default:

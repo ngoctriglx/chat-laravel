@@ -39,10 +39,6 @@ class FriendController extends Controller {
                     return ApiResponseHelper::error('Friend request already exists.', 400);
                 } elseif ($relationship_status === 'friends') {
                     return ApiResponseHelper::error('You are already friends.', 400);
-                } elseif ($relationship_status === 'declined') {
-                    $getFriendship = $friendService->getFriendship($senderId, $receiverId);
-                    $getFriendship->update(['status' => FriendRequest::STATUS_PENDING]);
-                    return ApiResponseHelper::success('Friend request resent.');
                 } elseif ($relationship_status === 'blocked') {
                     return ApiResponseHelper::error('You cannot send friend requests.', 400);
                 } else {
@@ -67,15 +63,17 @@ class FriendController extends Controller {
             $request->validate(['receiver_id' => 'required|integer']);
 
             $user = $request->user();
+
+            $senderId = $user->user_id;
             $receiverId = $request->receiver_id;
 
-            $friendRequest = FriendRequest::where('sender_id', $user->user_id)->where('receiver_id', $receiverId)->where('status', FriendRequest::STATUS_PENDING)->first();
+            $friendRequest = FriendRequest::where('sender_id', $senderId)->where('receiver_id', $receiverId)->where('status', FriendRequest::STATUS_PENDING)->first();
 
             if (!$friendRequest) {
                 return ApiResponseHelper::error('Friend request not found.', 404);
             }
-
             $friendRequest->delete();
+            broadcast(new FriendEvent('friend-revoked', $receiverId, $senderId))->toOthers();
             return ApiResponseHelper::success('Friend request revoked.');
         } catch (\Throwable $e) {
             return ApiResponseHelper::handleException($e);
@@ -84,10 +82,34 @@ class FriendController extends Controller {
 
     public function declineRequest(Request $request) {
         try {
-            $request->validate(['sender_id' => 'required|integer']);
+            $request->validate(['receiver_id' => 'required|integer']);
 
             $user = $request->user();
-            $senderId = $request->sender_id;
+            $senderId = $user->user_id;
+            $receiverId = $request->receiver_id;
+
+            $friendRequest = FriendRequest::where('sender_id', $receiverId)->where('receiver_id', $senderId)->where('status', FriendRequest::STATUS_PENDING)->first();
+
+            if (!$friendRequest) {
+                return ApiResponseHelper::error('Friend request not found.', 404);
+            }
+
+            $friendRequest->delete();
+
+            broadcast(new FriendEvent('friend-declined', $receiverId, $senderId))->toOthers();
+            return ApiResponseHelper::success('Friend request declined.');
+        } catch (\Throwable $e) {
+            return ApiResponseHelper::handleException($e);
+        }
+    }
+
+    public function acceptRequest(Request $request) {
+        try {
+            $request->validate(['receiver_id' => 'required|integer']);
+
+            $user = $request->user();
+            $senderId = $user->user_id;
+            $receiverId = $request->sender_id;
 
             $friendRequest = FriendRequest::where('sender_id', $senderId)->where('receiver_id', $user->user_id)->where('status', FriendRequest::STATUS_PENDING)->first();
 
@@ -95,8 +117,34 @@ class FriendController extends Controller {
                 return ApiResponseHelper::error('Friend request not found.', 404);
             }
 
-            $friendRequest->update(['status' => FriendRequest::STATUS_DECLINED]);
-            return ApiResponseHelper::success('Friend request declined.');
+            $friendRequest->update(['status' => FriendRequest::STATUS_ACCEPTED]);
+
+            broadcast(new FriendEvent('friend-accepted', $receiverId, $senderId))->toOthers();
+            return ApiResponseHelper::success('Friend request accepted.');
+        } catch (\Throwable $e) {
+            return ApiResponseHelper::handleException($e);
+        }
+    }
+
+    public function removeFriend(Request $request) {
+        try {
+            $request->validate(['receiver_id' => 'required|integer']);
+
+            $user = $request->user();
+
+            $senderId = $user->user_id;
+            $receiverId = $request->receiver_id;
+
+            $friendRequest = FriendRequest::where('sender_id', $senderId)->where('receiver_id', $receiverId)->where('status', FriendRequest::STATUS_ACCEPTED)->first();
+
+            if (!$friendRequest) {
+                return ApiResponseHelper::error('Friend request not found.', 404);
+            }
+
+            $friendRequest->delete();
+
+            broadcast(new FriendEvent('friend-removed', $receiverId, $senderId))->toOthers();
+            return ApiResponseHelper::success('Friend removed.');
         } catch (\Throwable $e) {
             return ApiResponseHelper::handleException($e);
         }

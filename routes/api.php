@@ -29,6 +29,8 @@ Route::prefix('user')->middleware('auth:sanctum')->group(function () {
     Route::post('friend-request', [FriendController::class, 'sendRequest']);
     Route::post('friend-request/revoke', [FriendController::class, 'revokeRequest']);
     Route::post('friend-request/decline', [FriendController::class, 'declineRequest']);
+    Route::post('friend-request/accept', [FriendController::class, 'acceptRequest']);
+    Route::post('friend-request/remove', [FriendController::class, 'removeFriend']);
 });
 
 
