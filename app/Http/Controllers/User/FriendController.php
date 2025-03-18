@@ -6,9 +6,10 @@ use App\Events\FriendEvent;
 use App\Helpers\ApiResponseHelper;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\Models\FriendRequest;
+use App\Models\Friend;
 use App\Models\User;
 use App\Services\FriendService;
+use App\Services\UserService;
 use Illuminate\Support\Facades\RateLimiter;
 
 class FriendController extends Controller {
@@ -45,10 +46,10 @@ class FriendController extends Controller {
                     return ApiResponseHelper::error('An error occurred.', 400);
                 }
             } else {
-                FriendRequest::create([
+                Friend::create([
                     'sender_id' => $senderId,
                     'receiver_id' => $receiverId,
-                    'status' => FriendRequest::STATUS_PENDING,
+                    'status' => Friend::STATUS_PENDING,
                 ]);
                 broadcast(new FriendEvent('friend-request', $receiverId, $senderId))->toOthers();
                 return ApiResponseHelper::success('Friend request sent.', 201);
@@ -67,7 +68,7 @@ class FriendController extends Controller {
             $senderId = $user->user_id;
             $receiverId = $request->receiver_id;
 
-            $friendRequest = FriendRequest::where('sender_id', $senderId)->where('receiver_id', $receiverId)->where('status', FriendRequest::STATUS_PENDING)->first();
+            $friendRequest = Friend::where('sender_id', $senderId)->where('receiver_id', $receiverId)->where('status', Friend::STATUS_PENDING)->first();
 
             if (!$friendRequest) {
                 return ApiResponseHelper::error('Friend request not found.', 404);
@@ -88,7 +89,7 @@ class FriendController extends Controller {
             $senderId = $user->user_id;
             $receiverId = $request->receiver_id;
 
-            $friendRequest = FriendRequest::where('sender_id', $receiverId)->where('receiver_id', $senderId)->where('status', FriendRequest::STATUS_PENDING)->first();
+            $friendRequest = Friend::where('sender_id', $receiverId)->where('receiver_id', $senderId)->where('status', Friend::STATUS_PENDING)->first();
 
             if (!$friendRequest) {
                 return ApiResponseHelper::error('Friend request not found.', 404);
@@ -108,18 +109,25 @@ class FriendController extends Controller {
             $request->validate(['receiver_id' => 'required|integer']);
 
             $user = $request->user();
-            $senderId = $user->user_id;
-            $receiverId = $request->sender_id;
-
-            $friendRequest = FriendRequest::where('sender_id', $senderId)->where('receiver_id', $user->user_id)->where('status', FriendRequest::STATUS_PENDING)->first();
+            $receiverId = $user->user_id;
+            $senderId = $request->receiver_id;
+            $friendRequest = Friend::where('sender_id', $senderId)
+                ->where('receiver_id', $receiverId)
+                ->where('status', Friend::STATUS_PENDING)
+                ->first();
 
             if (!$friendRequest) {
                 return ApiResponseHelper::error('Friend request not found.', 404);
             }
 
-            $friendRequest->update(['status' => FriendRequest::STATUS_ACCEPTED]);
+            $friendRequest->update(['status' => Friend::STATUS_ACCEPTED]);
 
-            broadcast(new FriendEvent('friend-accepted', $receiverId, $senderId))->toOthers();
+            Friend::updateOrCreate(
+                ['sender_id' => $receiverId, 'receiver_id' => $senderId],
+                ['status' => Friend::STATUS_ACCEPTED]
+            );
+
+            broadcast(new FriendEvent('friend-accepted', $senderId, $receiverId))->toOthers();
             return ApiResponseHelper::success('Friend request accepted.');
         } catch (\Throwable $e) {
             return ApiResponseHelper::handleException($e);
@@ -135,16 +143,56 @@ class FriendController extends Controller {
             $senderId = $user->user_id;
             $receiverId = $request->receiver_id;
 
-            $friendRequest = FriendRequest::where('sender_id', $senderId)->where('receiver_id', $receiverId)->where('status', FriendRequest::STATUS_ACCEPTED)->first();
+            $friendRequest = Friend::where(function ($query) use ($senderId, $receiverId) {
+                $query->where('sender_id', $senderId)
+                    ->where('receiver_id', $receiverId)
+                    ->where('status', Friend::STATUS_ACCEPTED);
+            })->orWhere(function ($query) use ($senderId, $receiverId) {
+                $query->where('sender_id', $receiverId)
+                    ->where('receiver_id', $senderId)
+                    ->where('status', Friend::STATUS_ACCEPTED);
+            })->first();
 
             if (!$friendRequest) {
                 return ApiResponseHelper::error('Friend request not found.', 404);
             }
 
-            $friendRequest->delete();
+            Friend::where(function ($query) use ($senderId, $receiverId) {
+                $query->where('sender_id', $senderId)->where('receiver_id', $receiverId);
+            })->orWhere(function ($query) use ($senderId, $receiverId) {
+                $query->where('sender_id', $receiverId)->where('receiver_id', $senderId);
+            })->delete();
 
             broadcast(new FriendEvent('friend-removed', $receiverId, $senderId))->toOthers();
             return ApiResponseHelper::success('Friend removed.');
+        } catch (\Throwable $e) {
+            return ApiResponseHelper::handleException($e);
+        }
+    }
+
+    public function getFriends(Request $request, UserService $userService) {
+        try {
+            $user = $request->user();
+            $friends = Friend::where(function ($query) use ($user) {
+                $query->where('sender_id', $user->user_id)
+                    ->orWhere('receiver_id', $user->user_id);
+            })->where('status', Friend::STATUS_ACCEPTED)
+                ->with(['sender', 'receiver'])
+                ->paginate(20);
+
+            $friendList = $friends->map(function ($friend) use ($user, $userService) {
+                $friendUser = $friend->sender_id == $user->user_id ? $friend->receiver : $friend->sender;
+                return $userService->getUserInformation($friendUser->user_id);
+            });
+
+            return ApiResponseHelper::success([
+                'friends' => $friendList,
+                'pagination' => [
+                    'current_page' => $friends->currentPage(),
+                    'total_pages'  => $friends->lastPage(),
+                    'total_friends' => $friends->total(),
+                ]
+            ]);
         } catch (\Throwable $e) {
             return ApiResponseHelper::handleException($e);
         }

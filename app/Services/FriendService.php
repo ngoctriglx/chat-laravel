@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\FriendRequest;
+use App\Models\Friend;
 
 class FriendService {
 
@@ -11,7 +11,7 @@ class FriendService {
             return 'self';
         }
 
-        $friendRequest = FriendRequest::where(function ($query) use ($userId, $otherUserId) {
+        $friendRequest = Friend::where(function ($query) use ($userId, $otherUserId) {
             $query->where('sender_id', $userId)
                 ->where('receiver_id', $otherUserId);
         })
@@ -40,11 +40,11 @@ class FriendService {
         }
 
         switch ($friendRequest->status) {
-            case FriendRequest::STATUS_ACCEPTED:
+            case Friend::STATUS_ACCEPTED:
                 return 'friends';
-            case FriendRequest::STATUS_PENDING:
+            case Friend::STATUS_PENDING:
                 return $friendRequest->sender_id == $userId ? 'request_sent' : 'request_received';
-            case FriendRequest::STATUS_BLOCKED:
+            case Friend::STATUS_BLOCKED:
                 return 'blocked';
             default:
                 return 'unknown';

@@ -26,11 +26,12 @@ Route::prefix('user')->middleware('auth:sanctum')->group(function () {
     Route::patch('me/details', [UserDetailController::class, 'updateUserDetail']);
     Route::get('search/{query}', [UserController::class, 'searchUser']);
     // FriendController
-    Route::post('friend-request', [FriendController::class, 'sendRequest']);
-    Route::post('friend-request/revoke', [FriendController::class, 'revokeRequest']);
-    Route::post('friend-request/decline', [FriendController::class, 'declineRequest']);
-    Route::post('friend-request/accept', [FriendController::class, 'acceptRequest']);
-    Route::post('friend-request/remove', [FriendController::class, 'removeFriend']);
+    Route::post('friend/request', [FriendController::class, 'sendRequest']);
+    Route::post('friend/revoke', [FriendController::class, 'revokeRequest']);
+    Route::post('friend/decline', [FriendController::class, 'declineRequest']);
+    Route::post('friend/accept', [FriendController::class, 'acceptRequest']);
+    Route::post('friend/remove', [FriendController::class, 'removeFriend']);
+    Route::get('friends', [FriendController::class, 'getFriends']);
 });
 
 
