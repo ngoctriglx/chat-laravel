@@ -6,16 +6,21 @@ use App\Http\Controllers\API\ApiController;
 use App\Models\Friend;
 use App\Models\User;
 use App\Services\FriendService;
+use App\Services\UserService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 class FriendController extends ApiController
 {
+    protected $userService;
     protected $friendService;
 
-    public function __construct(FriendService $friendService)
-    {
+    public function __construct(
+        UserService $userService,
+        FriendService $friendService
+    ) {
+        $this->userService = $userService;
         $this->friendService = $friendService;
     }
 
@@ -123,6 +128,25 @@ class FriendController extends ApiController
     }
 
     /**
+     * Get list of friends with pagination
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getFriends(Request $request)
+    {
+        $perPage = $request->input('per_page', 20);
+        $page = $request->input('page', 1);
+
+        try {
+            $friends = $this->friendService->getFriendsList(Auth::id(), $perPage, $page);
+            return $this->success($friends);
+        } catch (\Exception $e) {
+            return $this->error('Unable to retrieve friends list', 500);
+        }
+    }
+
+    /**
      * Add a new friend (direct friendship without request)
      *
      * @param Request $request
@@ -165,21 +189,6 @@ class FriendController extends ApiController
     }
 
     /**
-     * Get list of friends
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function getFriends()
-    {
-        $friends = Friend::with('friend')
-            ->where('user_id', Auth::id())
-            ->get()
-            ->pluck('friend');
-
-        return $this->success(['friends' => $friends]);
-    }
-
-    /**
      * Remove a friend
      */
     public function removeFriend(Request $request, $friendId)
@@ -200,5 +209,4 @@ class FriendController extends ApiController
 
         return $this->success('Friend removed successfully');
     }
-
 }

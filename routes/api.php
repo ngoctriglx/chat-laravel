@@ -38,10 +38,7 @@ Route::prefix('v1')->group(function () {
                 Route::delete('/revoke/{receiver_id}', [FriendController::class, 'revokeRequest']);
                 Route::delete('/decline/{sender_id}', [FriendController::class, 'declineRequest']);
                 Route::post('/accept', [FriendController::class, 'acceptRequest']);
-                Route::post('/', [FriendController::class, 'pendingRequests']);
             });
         });
     });
 });
-
-Route::post('/send-message', [ChatController::class, 'sendMessage']);

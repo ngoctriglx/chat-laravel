@@ -254,4 +254,54 @@ class FriendService
         // No request exists
         return null;
     }
+
+    /**
+     * Get paginated list of friends with their information
+     * 
+     * @param int $userId The ID of the user
+     * @param int $perPage Number of items per page
+     * @param int $page Current page number
+     * @return array
+     */
+    public function getFriendsList($userId, $perPage = 20, $page = 1): array
+    {
+        // Get friends with their user details in a single query
+        $friends = Friend::with(['friend.userDetail' => function ($query) {
+                $query->select('detail_id', 'user_id', 'first_name', 'last_name', 'picture', 'gender', 'birth_date', 'status_message', 'background_image');
+            }])
+            ->where('user_id', $userId)
+            ->whereHas('friend', function ($query) {
+                $query->where('user_account_status', User::STATUS_ACTIVE);
+            })
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        // Transform the data to match the expected format
+        $friends->getCollection()->transform(function ($friend) {
+            $userDetail = $friend->friend->userDetail;
+            return [
+                'user_id' => $friend->friend->user_id,
+                'user_email' => $friend->friend->user_email,
+                'user_phone' => $friend->friend->user_phone,
+                'first_name' => $userDetail->first_name ?? null,
+                'last_name' => $userDetail->last_name ?? null,
+                'gender' => $userDetail->gender ?? null,
+                'picture' => $userDetail->picture ? asset('storage/' . $userDetail->picture) : null,
+                'background_image' => $userDetail->background_image ?? null,
+                'birth_date' => $userDetail->birth_date ?? null,
+                'status_message' => $userDetail->status_message ?? null,
+            ];
+        });
+
+        return [
+            'data' => $friends->items(),
+            'pagination' => [
+                'total' => $friends->total(),
+                'per_page' => $friends->perPage(),
+                'current_page' => $friends->currentPage(),
+                'last_page' => $friends->lastPage(),
+                'from' => $friends->firstItem(),
+                'to' => $friends->lastItem(),
+            ]
+        ];
+    }
 }
