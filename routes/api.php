@@ -1,38 +1,47 @@
 <?php
 
+use App\Http\Controllers\API\Auth\AuthController;
+use App\Http\Controllers\API\User\UserController;
+use App\Http\Controllers\API\User\UserDetailController;
+use App\Http\Controllers\API\User\FriendController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ChatController;
-use App\Http\Controllers\User\UserController;
-use App\Http\Controllers\User\UserDetailController;
-use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\User\FriendController;
 use App\Models\User;
 
 Route::post('broadcasting', function (Request $request) {
     return Broadcast::auth($request);
 })->middleware('auth:sanctum');
 
-Route::prefix('auth')->group(function () {
-    Route::post('send-verification-code', [AuthController::class, 'sendVerificationCode']);
-    Route::post('verify-code', [AuthController::class, 'verifyCode']);
-});
+Route::prefix('v1')->group(function () {
+    Route::prefix('auth')->group(function () {
+        Route::post('send-code', [AuthController::class, 'sendCode']);
+        Route::post('verify-code', [AuthController::class, 'verifyCode']);
+        Route::post('login', [AuthController::class, 'login']);
+        Route::post('register', [AuthController::class, 'register']);
+    });
 
-Route::prefix('user')->middleware('auth:sanctum')->group(function () {
-   
-    Route::post('logout', [UserController::class, 'logout']);
-    Route::get('me', [UserController::class, 'getUser']);
-    Route::patch('me', [UserController::class, 'updateUser']);
-    Route::patch('me/details', [UserDetailController::class, 'updateUserDetail']);
-    Route::get('search/{query}', [UserController::class, 'searchUser']);
-    // FriendController
-    Route::post('friend/request', [FriendController::class, 'sendRequest']);
-    Route::post('friend/revoke', [FriendController::class, 'revokeRequest']);
-    Route::post('friend/decline', [FriendController::class, 'declineRequest']);
-    Route::post('friend/accept', [FriendController::class, 'acceptRequest']);
-    Route::post('friend/remove', [FriendController::class, 'removeFriend']);
-    Route::get('friends', [FriendController::class, 'getFriends']);
-});
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::prefix('user')->group(function () {
+            Route::get('/search/{query}', [UserController::class, 'getUser']);
+            Route::get('/me', [UserController::class, 'getMe']);
+            Route::patch('/me', [UserController::class, 'updateMe']);
+            Route::patch('/me/details', [UserDetailController::class, 'updateMe']);
+        });
 
+        Route::prefix('friends')->group(function () {
+            Route::get('/', [FriendController::class, 'getFriends']);
+            Route::delete('/remove/{user_id}', [FriendController::class, 'removeFriend']);
+            
+            Route::prefix('requests')->group(function () {
+                Route::post('/send', [FriendController::class, 'sendRequest']);
+                Route::delete('/revoke/{receiver_id}', [FriendController::class, 'revokeRequest']);
+                Route::delete('/decline/{sender_id}', [FriendController::class, 'declineRequest']);
+                Route::post('/accept', [FriendController::class, 'acceptRequest']);
+                Route::post('/', [FriendController::class, 'pendingRequests']);
+            });
+        });
+    });
+});
 
 Route::post('/send-message', [ChatController::class, 'sendMessage']);

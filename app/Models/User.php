@@ -14,7 +14,8 @@ use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 
-class User extends Authenticatable {
+class User extends Authenticatable
+{
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasApiTokens;
 
@@ -67,7 +68,8 @@ class User extends Authenticatable {
      *
      * @return array<string, string>
      */
-    protected function casts(): array {
+    protected function casts(): array
+    {
         return [
             'user_registered' => 'datetime',
             'user_password' => 'hashed',
@@ -79,7 +81,8 @@ class User extends Authenticatable {
      *
      * @return string
      */
-    public function getAuthPassword() {
+    public function getAuthPassword()
+    {
         return $this->user_password;
     }
 
@@ -88,8 +91,9 @@ class User extends Authenticatable {
      *
      * @return string
      */
-    public function getAuthIdentifierName() {
-        return 'user_email';
+    public function getAuthIdentifierName()
+    {
+        return 'user_id';
     }
 
     /**
@@ -97,7 +101,8 @@ class User extends Authenticatable {
      *
      * @return string
      */
-    public function getAuthIdentifier() {
+    public function getAuthIdentifier()
+    {
         return $this->getAttribute($this->getAuthIdentifierName());
     }
 
@@ -107,13 +112,13 @@ class User extends Authenticatable {
      * @param  \DateTimeInterface $date
      * @return string
      */
-    protected function serializeDate(\DateTimeInterface $date): string {
+    protected function serializeDate(\DateTimeInterface $date): string
+    {
         return $date->format('Y-m-d H:i:s');
     }
 
-    public function userDetail(): HasOne {
+    public function userDetail(): HasOne
+    {
         return $this->hasOne(UserDetail::class, 'user_id', 'user_id');
     }
-
-    
 }

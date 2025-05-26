@@ -19,7 +19,7 @@ class UserService {
             'first_name' => $user['user_detail']['first_name'],
             'last_name' => $user['user_detail']['last_name'],
             'gender' => $user['user_detail']['gender'],
-            'picture' => $user['user_detail']['picture'],
+            'picture' => asset('storage/' . $user['user_detail']['picture']),
             'background_image' => $user['user_detail']['background_image'],
             'birth_date' => $user['user_detail']['birth_date'],
             'status_message' => $user['user_detail']['status_message'],
