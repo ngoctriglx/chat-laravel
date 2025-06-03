@@ -135,7 +135,7 @@ class AuthController extends ApiController
             }
 
             return $this->success([
-                'token' => $user->createToken('auth_token', ['*'], now()->addDays(1))->plainTextToken,
+                'token' => $user->createToken('auth_token', ['*'], now()->addDays(30))->plainTextToken,
             ]);
         } catch (\Throwable $e) {
             return $this->handleException($e);

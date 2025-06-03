@@ -40,16 +40,31 @@ class FriendService
             return false;
         }
 
-        // Check if request already exists
-        if ($this->hasPendingRequest($id, $receiverId)) {
-            return false;
-        }
+        // Check for any existing request (including rejected ones)
+        $existingRequest = FriendRequest::where(function ($query) use ($id, $receiverId) {
+            $query->where('sender_id', $id)
+                ->where('receiver_id', $receiverId);
+        })->orWhere(function ($query) use ($id, $receiverId) {
+            $query->where('sender_id', $receiverId)
+                ->where('receiver_id', $id);
+        })->first();
 
-        $request = FriendRequest::create([
-            'sender_id' => $id,
-            'receiver_id' => $receiverId,
-            'status' => 'pending'
-        ]);
+        if ($existingRequest) {
+            // Update existing request
+            $existingRequest->update([
+                'sender_id' => $id,
+                'receiver_id' => $receiverId,
+                'status' => 'pending'
+            ]);
+            $request = $existingRequest;
+        } else {
+            // Create new request
+            $request = FriendRequest::create([
+                'sender_id' => $id,
+                'receiver_id' => $receiverId,
+                'status' => 'pending'
+            ]);
+        }
 
         if ($request) {
             // Broadcast friend request event
@@ -85,27 +100,30 @@ class FriendService
     }
 
     /**
-     * Decline a friend request
+     * Reject a friend request
      */
-    public function declineRequest($id, $senderId): bool
+    public function rejectRequest($id, $senderId): bool
     {
-        $request = FriendRequest::where('sender_id', $senderId)
-            ->where('receiver_id', $id)
-            ->where('status', 'pending')
-            ->first();
+        try {
+            $request = FriendRequest::where('sender_id', $senderId)
+                ->where('receiver_id', $id)
+                ->where('status', 'pending')
+                ->first();
 
-        if (!$request) {
+            if (!$request) {
+                return false;
+            }
+
+            $request->status = 'rejected';
+            $request->save();
+
+            // Broadcast friend rejected event
+            Event::dispatch(new FriendEvent('rejected', $senderId, $id));
+
+            return true;
+        } catch (\Exception $e) {
             return false;
         }
-
-        $success = $request->delete();
-
-        if ($success) {
-            // Broadcast friend declined event
-            Event::dispatch(new FriendEvent('declined', $senderId, $id));
-        }
-
-        return $success;
     }
 
     /**
@@ -233,8 +251,8 @@ class FriendService
             return 'request_received';
         }
 
-        // Check if there was a declined request
-        $declinedRequest = FriendRequest::where(function ($query) use ($userId, $otherUserId) {
+        // Check if there was a rejected request
+        $rejectedRequest = FriendRequest::where(function ($query) use ($userId, $otherUserId) {
             $query->where(function ($q) use ($userId, $otherUserId) {
                 $q->where('sender_id', $userId)
                     ->where('receiver_id', $otherUserId);
@@ -243,12 +261,12 @@ class FriendService
                     ->where('receiver_id', $userId);
             });
         })
-            ->where('status', 'declined')
+            ->where('status', 'rejected')
             ->latest()
             ->first();
 
-        if ($declinedRequest) {
-            return 'request_declined';
+        if ($rejectedRequest) {
+            return 'request_rejected';
         }
 
         // No request exists
@@ -301,6 +319,50 @@ class FriendService
                 'last_page' => $friends->lastPage(),
                 'from' => $friends->firstItem(),
                 'to' => $friends->lastItem(),
+            ]
+        ];
+    }
+
+    public function getFriendRequest($userId, $perPage = 20, $page = 1): array
+    {
+        // Get received friend requests with user details in a single query
+        $requests = FriendRequest::with(['sender' => function ($query) {
+                $query->select('user_id', 'user_email', 'user_phone');
+            }, 'sender.userDetail' => function ($query) {
+                $query->select('detail_id', 'user_id', 'first_name', 'last_name', 'picture');
+            }])
+            ->where('receiver_id', $userId)
+            ->where('status', 'pending')
+            ->whereHas('sender', function ($query) {
+                $query->where('user_account_status', User::STATUS_ACTIVE);
+            })
+            ->select('id', 'sender_id', 'receiver_id', 'status', 'created_at')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        // Transform the data to match the expected format
+        $requests->getCollection()->transform(function ($request) {
+            $userDetail = $request->sender->userDetail;
+            return [
+                'user_id' => $request->sender->user_id,
+                'user_email' => $request->sender->user_email,
+                'user_phone' => $request->sender->user_phone,
+                'first_name' => $userDetail->first_name ?? null,
+                'last_name' => $userDetail->last_name ?? null,
+                'picture' => $userDetail->picture ? asset('storage/' . $userDetail->picture) : null,
+                'request_sent_at' => $request->created_at->diffForHumans(),
+                'request_sent_at_raw' => $request->created_at->toIso8601String(),
+            ];
+        });
+
+        return [
+            'data' => $requests->items(),
+            'pagination' => [
+                'total' => $requests->total(),
+                'per_page' => $requests->perPage(),
+                'current_page' => $requests->currentPage(),
+                'last_page' => $requests->lastPage(),
+                'from' => $requests->firstItem(),
+                'to' => $requests->lastItem(),
             ]
         ];
     }

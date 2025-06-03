@@ -34,9 +34,10 @@ Route::prefix('v1')->group(function () {
             Route::delete('/remove/{user_id}', [FriendController::class, 'removeFriend']);
             
             Route::prefix('requests')->group(function () {
+                Route::get('/', [FriendController::class, 'getFriendRequests']);
                 Route::post('/send', [FriendController::class, 'sendRequest']);
                 Route::delete('/revoke/{receiver_id}', [FriendController::class, 'revokeRequest']);
-                Route::delete('/decline/{sender_id}', [FriendController::class, 'declineRequest']);
+                Route::delete('/reject/{sender_id}', [FriendController::class, 'rejectRequest']);
                 Route::post('/accept', [FriendController::class, 'acceptRequest']);
             });
         });

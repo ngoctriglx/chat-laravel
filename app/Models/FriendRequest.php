@@ -18,7 +18,7 @@ class FriendRequest extends Model
     ];
 
     const STATUS_PENDING = 'pending';
-    const STATUS_DECLINED = 'declined';
+    const STATUS_REJECTED = 'rejected';
     const STATUS_BLOCKED = 'blocked';
 
     /**

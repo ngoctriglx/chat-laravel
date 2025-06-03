@@ -23,6 +23,25 @@ class FriendController extends ApiController
         $this->userService = $userService;
         $this->friendService = $friendService;
     }
+    
+    /**
+     * Get list of friends with pagination
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getFriends(Request $request)
+    {
+        $perPage = $request->input('per_page', 20);
+        $page = $request->input('page', 1);
+
+        try {
+            $friends = $this->friendService->getFriendsList(Auth::id(), $perPage, $page);
+            return $this->success($friends);
+        } catch (\Exception $e) {
+            return $this->error('Unable to retrieve friends list', 500);
+        }
+    }
 
     /**
      * Send a friend request
@@ -76,30 +95,32 @@ class FriendController extends ApiController
     }
 
     /**
-     * Decline a friend request
+     * Reject a friend request
      *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function declineRequest(Request $request, $sender_id)
+    public function rejectRequest(Request $request, $sender_id)
     {
-        $validator = Validator::make([
-            'sender_id' => $sender_id,
-        ], [
-            'sender_id' => 'required|exists:users,user_id'
-        ]);
+        try {
+            $validator = Validator::make(['sender_id' => $sender_id], [
+                'sender_id' => 'required|exists:users,user_id'
+            ]);
 
-        if ($validator->fails()) {
-            return $this->error($validator->errors()->first(), 422);
+            if ($validator->fails()) {
+                return $this->error($validator->errors()->first(), 422);
+            }
+
+            $success = $this->friendService->rejectRequest(Auth::id(), $request->sender_id);
+
+            if (!$success) {
+                return $this->error('Unable to reject friend request', 400);
+            }
+
+            return $this->success('Friend request rejected successfully');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
         }
-
-        $success = $this->friendService->declineRequest(Auth::id(), $request->sender_id);
-
-        if (!$success) {
-            return $this->error('Unable to decline friend request', 400);
-        }
-
-        return $this->success('Friend request declined successfully');
     }
 
     /**
@@ -128,67 +149,6 @@ class FriendController extends ApiController
     }
 
     /**
-     * Get list of friends with pagination
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function getFriends(Request $request)
-    {
-        $perPage = $request->input('per_page', 20);
-        $page = $request->input('page', 1);
-
-        try {
-            $friends = $this->friendService->getFriendsList(Auth::id(), $perPage, $page);
-            return $this->success($friends);
-        } catch (\Exception $e) {
-            return $this->error('Unable to retrieve friends list', 500);
-        }
-    }
-
-    /**
-     * Add a new friend (direct friendship without request)
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function addFriend(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'friend_id' => 'required|exists:users,id'
-        ]);
-
-        if ($validator->fails()) {
-            return $this->error($validator->errors()->first(), 422);
-        }
-
-        $user = Auth::user();
-        $targetUser = User::findOrFail($request->friend_id);
-
-        // Check if users are the same
-        if ($user->id === $targetUser->id) {
-            return $this->error('You cannot add yourself as a friend', 400);
-        }
-
-        if ($this->friendService->isFriend($user->id, $targetUser->id)) {
-            return $this->error('Friendship already exists', 400);
-        }
-
-        // Create bidirectional friendship
-        Friend::create([
-            'user_id' => $user->id,
-            'friend_id' => $targetUser->id
-        ]);
-
-        Friend::create([
-            'user_id' => $targetUser->id,
-            'friend_id' => $user->id
-        ]);
-
-        return $this->success('Friend added successfully');
-    }
-
-    /**
      * Remove a friend
      */
     public function removeFriend(Request $request, $friendId)
@@ -208,5 +168,24 @@ class FriendController extends ApiController
         }
 
         return $this->success('Friend removed successfully');
+    }
+
+    /**
+     * Get friend requests for a user
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getFriendRequests(Request $request)
+    {
+        $perPage = $request->input('per_page', 20);
+        $page = $request->input('page', 1);
+
+        try {
+            $friendRequests = $this->friendService->getFriendRequest(Auth::id(), $perPage, $page);
+            return $this->success($friendRequests);
+        } catch (\Exception $e) {
+            return $this->error('Unable to retrieve friend requests', 500);
+        }
     }
 }

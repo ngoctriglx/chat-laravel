@@ -23,7 +23,7 @@ class UserService
                 'first_name' => $user['user_detail']['first_name'],
                 'last_name' => $user['user_detail']['last_name'],
                 'gender' => $user['user_detail']['gender'],
-                'picture' => asset('storage/' . $user['user_detail']['picture']),
+                'picture' => asset('storage/' . ($user['user_detail']['picture'] ?? 'avatars/f7P4t4u4p5thbDZkRAomCjtRv7c2z92aha9OOZvXENpDrv7LGjCmb9pz3bxz8SwZ.png')),
                 'background_image' => $user['user_detail']['background_image'],
                 'birth_date' => $user['user_detail']['birth_date'],
                 'status_message' => $user['user_detail']['status_message'],
