@@ -9,7 +9,7 @@ class UserService
 {
     public function getUserInformation($userId)
     {
-        return Cache::remember("user_info:{$userId}", now()->addMinutes(10), function () use ($userId) {
+        return Cache::remember("user_info:{$userId}", now()->addMinutes(1), function () use ($userId) {
             $user = User::find($userId);
             if (!$user) {
                 return null;
@@ -24,7 +24,7 @@ class UserService
                 'last_name' => $user['user_detail']['last_name'],
                 'gender' => $user['user_detail']['gender'],
                 'picture' => asset('storage/' . ($user['user_detail']['picture'] ?? 'avatars/f7P4t4u4p5thbDZkRAomCjtRv7c2z92aha9OOZvXENpDrv7LGjCmb9pz3bxz8SwZ.png')),
-                'background_image' => $user['user_detail']['background_image'],
+                'background_image' => asset('storage/' . ($user['user_detail']['background_image'] ?? 'backgrounds/bg-5dsf6fdsfsdfsadfas68fsda5cxz7dfsfsd7fds5f.jpg')),
                 'birth_date' => $user['user_detail']['birth_date'],
                 'status_message' => $user['user_detail']['status_message'],
             ];
