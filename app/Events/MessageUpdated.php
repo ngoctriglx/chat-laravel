@@ -10,7 +10,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class MessageSent implements ShouldBroadcast
+class MessageUpdated implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -30,7 +30,7 @@ class MessageSent implements ShouldBroadcast
 
     public function broadcastAs()
     {
-        return 'message.sent';
+        return 'message.updated';
     }
 
     public function broadcastWith()
@@ -40,4 +40,4 @@ class MessageSent implements ShouldBroadcast
             'conversation_id' => $this->message->conversation_id,
         ];
     }
-}
+} 

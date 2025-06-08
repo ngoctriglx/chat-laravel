@@ -2,7 +2,7 @@
 
 namespace App\Events;
 
-use App\Models\Message;
+use App\Models\Conversation;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
@@ -10,34 +10,33 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class MessageSent implements ShouldBroadcast
+class ConversationCreated implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $message;
+    public $conversation;
 
-    public function __construct(Message $message)
+    public function __construct(Conversation $conversation)
     {
-        $this->message = $message->load(['sender', 'reactions.user', 'attachments']);
+        $this->conversation = $conversation->load('participants.user');
     }
 
     public function broadcastOn()
     {
-        return $this->message->conversation->participants->map(function ($participant) {
+        return $this->conversation->participants->map(function ($participant) {
             return new PresenceChannel('user.' . $participant->user_id);
         })->toArray();
     }
 
     public function broadcastAs()
     {
-        return 'message.sent';
+        return 'conversation.created';
     }
 
     public function broadcastWith()
     {
         return [
-            'message' => $this->message,
-            'conversation_id' => $this->message->conversation_id,
+            'conversation' => $this->conversation,
         ];
     }
-}
+} 
