@@ -74,4 +74,58 @@ class UserController extends ApiController
             return $this->handleException($e);
         }
     }
+
+    /**
+     * Search users by exact email or phone
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function searchUsers(Request $request)
+    {
+        try {
+            $user = $request->user();
+            
+            // Validate request parameters (security: only email/phone search allowed)
+            $request->validate([
+                'q' => 'required|string|max:100',
+                'type' => 'nullable|in:email,phone',
+            ]);
+
+            // Additional validation for search query
+            $searchQuery = $request->input('q');
+            if (!filter_var($searchQuery, FILTER_VALIDATE_EMAIL) && 
+                !preg_match('/^\+?[0-9]{10,15}$/', $searchQuery)) {
+                return $this->error('Search query must be a valid email address or phone number.', 422);
+            }
+
+            // Prepare filters (security: only essential filters)
+            $filters = [
+                'q' => $searchQuery,
+                'type' => $request->input('type'),
+                'exclude_user_id' => $user->user_id, // Always exclude current user
+            ];
+
+            // Search user
+            $userData = $this->userService->searchUsers($filters);
+
+            if (!$userData) {
+                return $this->error('User not found.', 404);
+            }
+
+            // Add relationship status
+            $userQueryId = $userData['user_id'];
+            $checkFriend = $this->friendService->isFriend($user->user_id, $userQueryId);
+            if ($checkFriend) {
+                $userData['relationship_status'] = 'friends';
+            } else {
+                $relationship_status = $this->friendService->getFriendRequestshipStatus($user->user_id, $userQueryId);
+                $userData['relationship_status'] = $relationship_status;
+            }
+
+            return $this->success($userData);
+        } catch (\Throwable $e) {
+            return $this->handleException($e);
+        }
+    }
 }

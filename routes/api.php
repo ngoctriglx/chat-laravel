@@ -11,6 +11,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
 
+// Health check endpoint
+Route::get('/health', function () {
+    return response()->json([
+        'status' => 'healthy',
+        'timestamp' => now()->toISOString(),
+        'version' => '1.0.0'
+    ]);
+});
+
 Route::post('broadcasting', function (Request $request) {
     return Broadcast::auth($request);
 })->middleware('auth:sanctum');
@@ -25,7 +34,7 @@ Route::prefix('v1')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('user')->group(function () {
-            Route::get('/search/{query}', [UserController::class, 'getUser']);
+            Route::get('/search', [UserController::class, 'searchUsers']);
             Route::get('/me', [UserController::class, 'getMe']);
             Route::patch('/me', [UserController::class, 'updateMe']);
             Route::patch('/me/details', [UserDetailController::class, 'updateMe']);
@@ -87,6 +96,9 @@ Route::prefix('v1')->group(function () {
             Route::prefix('presence')->group(function () {
                 Route::post('/online', [PresenceController::class, 'setOnline']);
                 Route::post('/offline', [PresenceController::class, 'setOffline']);
+                // Route::post('/away', [PresenceController::class, 'setAway']);
+                // Route::post('/busy', [PresenceController::class, 'setBusy']);
+                // Route::get('/status/{user_id}', [PresenceController::class, 'getStatus']);
             });
         });
     });
