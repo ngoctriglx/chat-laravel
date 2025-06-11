@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 
 class User extends Authenticatable
@@ -120,5 +121,15 @@ class User extends Authenticatable
     public function userDetail(): HasOne
     {
         return $this->hasOne(UserDetail::class, 'user_id', 'user_id');
+    }
+
+    /**
+     * Get all conversations where the user is a participant.
+     */
+    public function conversations(): BelongsToMany
+    {
+        return $this->belongsToMany(Conversation::class, 'conversation_participants', 'user_id', 'conversation_id')
+            ->withPivot(['joined_at', 'is_active', 'left_at', 'role'])
+            ->withTimestamps();
     }
 }

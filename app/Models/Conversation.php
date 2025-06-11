@@ -41,8 +41,8 @@ class Conversation extends Model
      */
     public function participants()
     {
-        return $this->belongsToMany(User::class, 'conversation_participants')
-            ->withPivot(['joined_at', 'is_active', 'left_at'])
+        return $this->belongsToMany(User::class, 'conversation_participants', 'conversation_id', 'user_id')
+            ->withPivot(['joined_at', 'is_active', 'left_at', 'role'])
             ->withTimestamps();
     }
 
@@ -51,9 +51,9 @@ class Conversation extends Model
      */
     public function activeParticipants()
     {
-        return $this->belongsToMany(User::class, 'conversation_participants')
+        return $this->belongsToMany(User::class, 'conversation_participants', 'conversation_id', 'user_id')
             ->wherePivot('is_active', true)
-            ->withPivot(['joined_at', 'is_active', 'left_at'])
+            ->withPivot(['joined_at', 'is_active', 'left_at', 'role'])
             ->withTimestamps();
     }
 
@@ -102,7 +102,7 @@ class Conversation extends Model
      */
     public function hasParticipant(int $userId): bool
     {
-        return $this->participants()->where('user_id', $userId)->exists();
+        return $this->participants()->where('conversation_participants.user_id', $userId)->exists();
     }
 
     /**
@@ -111,7 +111,7 @@ class Conversation extends Model
     public function hasActiveParticipant(int $userId): bool
     {
         return $this->participants()
-            ->where('user_id', $userId)
+            ->where('conversation_participants.user_id', $userId)
             ->wherePivot('is_active', true)
             ->exists();
     }
@@ -126,7 +126,7 @@ class Conversation extends Model
         }
 
         return $this->participants()
-            ->where('user_id', '!=', $userId)
+            ->where('conversation_participants.user_id', '!=', $userId)
             ->first();
     }
 } 

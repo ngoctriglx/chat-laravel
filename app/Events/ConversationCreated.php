@@ -18,7 +18,7 @@ class ConversationCreated implements ShouldBroadcast
 
     public function __construct(Conversation $conversation)
     {
-        $this->conversation = $conversation->load('participants.user');
+        $this->conversation = $conversation->load('participants');
     }
 
     public function broadcastOn()

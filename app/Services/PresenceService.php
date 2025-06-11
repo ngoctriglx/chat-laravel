@@ -103,7 +103,7 @@ class PresenceService
 
         foreach ($participants as $participant) {
             if ($this->isOnline($participant->user_id)) {
-                $onlineUsers[] = $participant->user;
+                $onlineUsers[] = $participant;
             }
         }
 
@@ -120,7 +120,7 @@ class PresenceService
 
         foreach ($participants as $participant) {
             if ($this->isTyping($participant->user_id, $conversation->id)) {
-                $typingUsers[] = $participant->user;
+                $typingUsers[] = $participant;
             }
         }
 

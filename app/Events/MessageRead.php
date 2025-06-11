@@ -29,7 +29,7 @@ class MessageRead implements ShouldBroadcast
     public function broadcastOn()
     {
         return $this->conversation->participants
-            ->where('user_id', '!=', $this->user->id)
+            ->where('user_id', '!=', $this->user->user_id)
             ->map(function ($participant) {
                 return new PresenceChannel('user.' . $participant->user_id);
             })
@@ -45,7 +45,7 @@ class MessageRead implements ShouldBroadcast
     {
         return [
             'conversation_id' => $this->conversation->id,
-            'user_id' => $this->user->id,
+            'user_id' => $this->user->user_id,
             'last_read_at' => $this->lastReadAt,
         ];
     }

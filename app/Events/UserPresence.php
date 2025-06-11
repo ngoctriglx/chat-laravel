@@ -43,7 +43,7 @@ class UserPresence implements ShouldBroadcast
     public function broadcastWith()
     {
         return [
-            'user_id' => $this->user->id,
+            'user_id' => $this->user->user_id,
             'status' => $this->status,
             'last_seen' => $this->lastSeen,
         ];

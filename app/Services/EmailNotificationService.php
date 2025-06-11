@@ -64,13 +64,13 @@ class EmailNotificationService {
 
             Log::info('Email notification sent successfully', [
                 'action' => $action,
-                'user_id' => $user->id,
+                'user_id' => $user->user_id,
                 'email' => $user->user_email
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to send email notification', [
                 'action' => $action,
-                'user_id' => $user->id ?? null,
+                'user_id' => $user->user_id ?? null,
                 'error' => $e->getMessage()
             ]);
             throw $e;

@@ -12,6 +12,7 @@ class ConversationParticipant extends Model
     protected $fillable = [
         'conversation_id',
         'user_id',
+        'role',
         'joined_at',
         'last_read_at',
         'is_active',

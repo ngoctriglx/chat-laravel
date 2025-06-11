@@ -14,17 +14,24 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class ConversationService
 {
+    protected $userService;
+
+    public function __construct(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
+
     /**
      * Get user's conversations with pagination
      */
     public function getUserConversations(User $user, int $perPage = 20): LengthAwarePaginator
     {
-        return $user->conversations()
+        $conversations = $user->conversations()
             ->whereHas('participants', function ($query) use ($user) {
-                $query->where('user_id', $user->user_id)
+                $query->where('conversation_participants.user_id', $user->user_id)
                     ->where('is_active', true);
             })
-            ->with(['participants.user' => function ($query) {
+            ->with(['participants' => function ($query) {
                 $query->where('is_active', true);
             }, 'latestMessage'])
             ->withCount(['messages' => function ($query) use ($user) {
@@ -37,6 +44,14 @@ class ConversationService
             }])
             ->orderBy('last_message_at', 'desc')
             ->paginate($perPage);
+
+        // Enhance participants with additional user information
+        $conversations->getCollection()->transform(function ($conversation) {
+            $this->enhanceParticipantsWithUserInfo($conversation);
+            return $conversation;
+        });
+
+        return $conversations;
     }
 
     /**
@@ -49,7 +64,7 @@ class ConversationService
             // Check for existing direct conversation
             if ($data['type'] === 'direct' && isset($data['participant_ids'][0])) {
                 $existingConversation = $this->findDirectConversation($creator, $data['participant_ids'][0]);
-                
+
                 if ($existingConversation) {
                     // If user was previously inactive, reactivate them
                     if (!$existingConversation->hasActiveParticipant($creator->user_id)) {
@@ -61,7 +76,14 @@ class ConversationService
                         // Update message visibility for the rejoining user
                         app(MessageService::class)->updateMessageVisibility($existingConversation, $creator, true);
                     }
-                    
+
+                    // Enhance participants with additional user information
+                    $existingConversation->load(['participants' => function ($query) {
+                        $query->where('is_active', true);
+                    }]);
+
+                    $this->enhanceParticipantsWithUserInfo($existingConversation);
+
                     return $existingConversation;
                 }
             }
@@ -70,7 +92,7 @@ class ConversationService
             $conversation = Conversation::create([
                 'name' => $data['name'] ?? null,
                 'type' => $data['type'],
-                'creator_id' => $creator->user_id,
+                'created_by' => $creator->user_id,
                 'metadata' => $data['metadata'] ?? null,
             ]);
 
@@ -101,7 +123,14 @@ class ConversationService
             // Broadcast event
             broadcast(new ConversationCreated($conversation))->toOthers();
 
-            return $conversation->load('participants');
+            // Load participants and enhance with user information
+            $conversation->load(['participants' => function ($query) {
+                $query->where('is_active', true);
+            }, 'creator']);
+
+            $this->enhanceParticipantsWithUserInfo($conversation);
+
+            return $conversation;
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;
@@ -124,9 +153,14 @@ class ConversationService
         $conversation->update($data);
         broadcast(new ConversationUpdated($conversation))->toOthers();
 
-        return $conversation->fresh(['participants.user' => function ($query) {
+        $conversation = $conversation->fresh(['participants' => function ($query) {
             $query->where('is_active', true);
         }]);
+
+        // Enhance participants with additional user information
+        $this->enhanceParticipantsWithUserInfo($conversation);
+
+        return $conversation;
     }
 
     /**
@@ -160,7 +194,7 @@ class ConversationService
                 }
             } else {
                 // For group conversations, only creator can delete
-                if ($conversation->creator_id !== $user->user_id) {
+                if ($conversation->created_by !== $user->user_id) {
                     throw new \Exception('Only the creator can delete group conversations');
                 }
 
@@ -203,6 +237,7 @@ class ConversationService
         }
 
         $conversation->participants()->attach($participantIds, [
+            'role' => 'member',
             'joined_at' => now(),
             'is_active' => true,
         ]);
@@ -211,9 +246,14 @@ class ConversationService
             broadcast(new ParticipantAdded($conversation, $participantId))->toOthers();
         }
 
-        return $conversation->fresh(['participants.user' => function ($query) {
+        $conversation = $conversation->fresh(['participants' => function ($query) {
             $query->where('is_active', true);
         }]);
+
+        // Enhance participants with additional user information
+        $this->enhanceParticipantsWithUserInfo($conversation);
+
+        return $conversation;
     }
 
     /**
@@ -245,11 +285,38 @@ class ConversationService
     {
         return Conversation::where('type', 'direct')
             ->whereHas('participants', function ($query) use ($user1) {
-                $query->where('user_id', $user1->user_id);
+                $query->where('conversation_participants.user_id', $user1->user_id);
             })
             ->whereHas('participants', function ($query) use ($user2Id) {
-                $query->where('user_id', $user2Id);
+                $query->where('conversation_participants.user_id', $user2Id);
             })
             ->first();
     }
-} 
+
+    /**
+     * Enhance participants with additional user information
+     */
+    public function enhanceParticipantsWithUserInfo(Conversation $conversation): void
+    {
+        if ($conversation->participants) {
+            $conversation->participants->transform(function ($participant) {
+                // Get additional user information
+                $userInfo = $this->userService->getUserInformation($participant->user_id);
+
+                // Merge the additional information with the participant data
+                if ($userInfo) {
+                    $participant->first_name = $userInfo['first_name'];
+                    $participant->last_name = $userInfo['last_name'];
+                    $participant->full_name = trim($userInfo['first_name'] . ' ' . $userInfo['last_name']);
+                    $participant->gender = $userInfo['gender'];
+                    $participant->picture = $userInfo['picture'];
+                    $participant->background_image = $userInfo['background_image'];
+                    $participant->birth_date = $userInfo['birth_date'];
+                    $participant->status_message = $userInfo['status_message'];
+                }
+
+                return $participant;
+            });
+        }
+    }
+}

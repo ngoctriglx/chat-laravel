@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('conversation_participants', function (Blueprint $table) {
             $table->uuid('conversation_id');
             $table->unsignedBigInteger('user_id');
+            $table->string('role')->default('member'); // admin, member
             $table->timestamp('joined_at')->useCurrent();
             $table->timestamp('left_at')->nullable();
             $table->timestamp('last_read_at')->nullable();

@@ -35,10 +35,19 @@ class ConversationController extends ApiController
     public function show(Conversation $conversation)
     {
         try {
-            if (!$conversation->participants->contains('user_id', Auth::id())) {
+            if (!$conversation->hasActiveParticipant(Auth::id())) {
                 return $this->error('You are not a participant in this conversation.', 403);
             }
-            return $this->success($conversation->load(['participants.user', 'creator']));
+            
+            // Load participants and enhance with user information
+            $conversation->load(['participants' => function ($query) {
+                $query->where('is_active', true);
+            }, 'creator']);
+            
+            // Enhance participants with additional user information
+            $this->conversationService->enhanceParticipantsWithUserInfo($conversation);
+            
+            return $this->success($conversation);
         } catch (\Exception $e) {
             return $this->handleException($e);
         }
@@ -49,7 +58,7 @@ class ConversationController extends ApiController
         try {
             $validator = Validator::make($request->all(), [
                 'participant_ids' => 'required|array|min:1',
-                'participant_ids.*' => 'exists:users,id',
+                'participant_ids.*' => 'exists:users,user_id',
                 'name' => 'required_if:type,group|string|max:255',
                 'type' => 'required|in:direct,group',
                 'metadata' => 'array',
@@ -64,7 +73,7 @@ class ConversationController extends ApiController
                 Auth::user()
             );
 
-            return $this->success($conversation->load(['participants.user', 'creator']), 201);
+            return $this->success($conversation, 201);
         } catch (\Exception $e) {
             return $this->handleException($e);
         }
@@ -73,7 +82,7 @@ class ConversationController extends ApiController
     public function update(Request $request, Conversation $conversation)
     {
         try {
-            if ($conversation->creator_id !== Auth::id()) {
+            if ($conversation->created_by !== Auth::id()) {
                 return $this->error('Only the conversation creator can update it.', 403);
             }
 
@@ -92,7 +101,7 @@ class ConversationController extends ApiController
                 Auth::user()
             );
 
-            return $this->success($conversation->load(['participants.user', 'creator']));
+            return $this->success($conversation);
         } catch (\Exception $e) {
             return $this->handleException($e);
         }
@@ -111,13 +120,13 @@ class ConversationController extends ApiController
     public function addParticipants(Request $request, Conversation $conversation)
     {
         try {
-            if ($conversation->creator_id !== Auth::id()) {
+            if ($conversation->created_by !== Auth::id()) {
                 return $this->error('Only the conversation creator can add participants.', 403);
             }
 
             $validator = Validator::make($request->all(), [
                 'participant_ids' => 'required|array|min:1',
-                'participant_ids.*' => 'exists:users,id',
+                'participant_ids.*' => 'exists:users,user_id',
             ]);
 
             if ($validator->fails()) {
@@ -139,13 +148,13 @@ class ConversationController extends ApiController
     public function removeParticipant(Conversation $conversation, User $user)
     {
         try {
-            if ($conversation->creator_id !== Auth::id()) {
+            if ($conversation->created_by !== Auth::id()) {
                 return $this->error('Only the conversation creator can remove participants.', 403);
             }
 
             $this->conversationService->removeParticipant(
                 $conversation,
-                $user->id,
+                $user->user_id,
                 Auth::user()
             );
 
