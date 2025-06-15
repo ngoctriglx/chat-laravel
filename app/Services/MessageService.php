@@ -10,6 +10,8 @@ use App\Events\MessageSent;
 use App\Events\MessageUpdated;
 use App\Events\MessageDeleted;
 use App\Events\MessageRead;
+use App\Events\ReactionAdded;
+use App\Events\ReactionRemoved;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -18,7 +20,7 @@ class MessageService
     /**
      * Get messages for a conversation with pagination
      */
-    public function getConversationMessages(Conversation $conversation, User $user, ?int $cursorId = null, int $perPage = 20): LengthAwarePaginator
+    public function getConversationMessages(Conversation $conversation, User $user, $cursorId = null, int $perPage = 20): LengthAwarePaginator
     {
         if (!$conversation->hasActiveParticipant($user->user_id)) {
             throw new \Exception('Unauthorized');
@@ -34,7 +36,17 @@ class MessageService
             ->orderBy('cursor_id', 'desc');
 
         if ($cursorId) {
-            $query->where('cursor_id', '<', $cursorId);
+            // Check if cursorId is a valid integer (cursor_id) or UUID (message id)
+            if (is_numeric($cursorId) || (is_string($cursorId) && ctype_digit($cursorId))) {
+                // It's a cursor_id (integer)
+                $query->where('cursor_id', '<', (int) $cursorId);
+            } else {
+                // It might be a message ID (UUID), find the message and use its cursor_id
+                $message = Message::where('id', $cursorId)->first();
+                if ($message) {
+                    $query->where('cursor_id', '<', $message->cursor_id);
+                }
+            }
         }
 
         return $query->paginate($perPage);
@@ -168,7 +180,7 @@ class MessageService
 
             // Broadcast read events
             foreach ($unreadMessages as $message) {
-                broadcast(new MessageRead($message, $user))->toOthers();
+                broadcast(new MessageRead($conversation, $user))->toOthers();
             }
         }
     }

@@ -4,26 +4,25 @@ namespace App\Events;
 
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class FriendEvent implements ShouldBroadcast {
+class FriendRequestRevoked implements ShouldBroadcast
+{
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $receiverId;
     public $senderId;
-    public $action;
 
     /**
      * Create a new event instance.
      */
-    public function __construct($action, $receiverId, $senderId) {
+    public function __construct(int $receiverId, int $senderId)
+    {
         $this->receiverId = $receiverId;
         $this->senderId = $senderId;
-        $this->action = $action;
     }
 
     /**
@@ -31,9 +30,10 @@ class FriendEvent implements ShouldBroadcast {
      *
      * @return array<int, \Illuminate\Broadcasting\Channel>
      */
-    public function broadcastOn(): array {
+    public function broadcastOn(): array
+    {
         return [
-            new PrivateChannel('friend-events'),
+            new PrivateChannel("user.{$this->receiverId}"),
         ];
     }
 
@@ -42,13 +42,20 @@ class FriendEvent implements ShouldBroadcast {
      *
      * @return string
      */
-    public function broadcastAs() {
-        return "friend-event.{$this->action}.{$this->receiverId}";
+    public function broadcastAs()
+    {
+        return 'friend.request.revoked';
     }
 
-    public function broadcastWith() {
+    /**
+     * Get the data to broadcast.
+     *
+     * @return array
+     */
+    public function broadcastWith()
+    {
         return [
             'sender_id' => $this->senderId
         ];
     }
-}
+} 

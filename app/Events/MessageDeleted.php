@@ -6,6 +6,7 @@ use App\Models\Message;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
@@ -27,9 +28,9 @@ class MessageDeleted implements ShouldBroadcast
 
     public function broadcastOn()
     {
-        return $this->deletedForEveryone
-            ? $this->getConversationParticipants()
-            : [new PresenceChannel('user.' . $this->message->sender_id)];
+        return $this->message->conversation->participants->map(function ($participant) {
+            return new PrivateChannel('user.' . $participant->user_id);
+        })->toArray();
     }
 
     public function broadcastAs()

@@ -38,7 +38,7 @@ class MessageController extends ApiController
     {
         try {
             $cursorId = $request->query('cursor_id');
-            $perPage = $request->query('per_page', 20);
+            $perPage = (int) $request->query('per_page', 20);
 
             $messages = $this->messageService->getConversationMessages(
                 $conversation,
@@ -212,8 +212,6 @@ class MessageController extends ApiController
             $isTyping = $request->input('is_typing', true);
             
             $this->presenceService->setTyping(Auth::user(), $conversation);
-            
-            broadcast(new UserTyping($conversation, Auth::user(), $isTyping));
             
             return $this->success('Typing status updated');
         } catch (\Exception $e) {

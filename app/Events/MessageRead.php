@@ -10,6 +10,7 @@ use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Broadcasting\PrivateChannel;
 
 class MessageRead implements ShouldBroadcast
 {
@@ -28,12 +29,9 @@ class MessageRead implements ShouldBroadcast
 
     public function broadcastOn()
     {
-        return $this->conversation->participants
-            ->where('user_id', '!=', $this->user->user_id)
-            ->map(function ($participant) {
-                return new PresenceChannel('user.' . $participant->user_id);
-            })
-            ->toArray();
+        return $this->conversation->participants->map(function ($participant) {
+            return new PrivateChannel('user.' . $participant->user_id);
+        })->toArray();
     }
 
     public function broadcastAs()

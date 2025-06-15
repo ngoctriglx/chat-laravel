@@ -12,42 +12,42 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Broadcasting\PrivateChannel;
 
-class UserTyping implements ShouldBroadcast
+class ConversationDeleted implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $conversation;
-    public $user;
-    public $isTyping;
+    public $deletedBy;
 
-    public function __construct(Conversation $conversation, User $user, bool $isTyping)
+    public function __construct(Conversation $conversation, User $deletedBy)
     {
         $this->conversation = $conversation;
-        $this->user = $user;
-        $this->isTyping = $isTyping;
+        $this->deletedBy = $deletedBy;
     }
 
     public function broadcastOn()
     {
-        return $this->conversation->participants
-            ->where('user_id', '!=', $this->user->user_id)
-            ->map(function ($participant) {
-                return new PrivateChannel('user.' . $participant->user_id);
-            })
-            ->toArray();
+        // Load participants if not already loaded
+        $this->conversation->load('participants');
+        
+        return $this->conversation->participants->map(function ($participant) {
+            return new PrivateChannel('user.' . $participant->user_id);
+        })->toArray();
     }
 
     public function broadcastAs()
     {
-        return 'user.typing';
+        return 'conversation.deleted';
     }
 
     public function broadcastWith()
     {
         return [
             'conversation_id' => $this->conversation->id,
-            'user_id' => $this->user->user_id,
-            'is_typing' => $this->isTyping,
+            'deleted_by' => [
+                'user_id' => $this->deletedBy->user_id,
+                'user_name' => $this->deletedBy->user_name,
+            ],
         ];
     }
 } 

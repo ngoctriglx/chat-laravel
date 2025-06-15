@@ -243,7 +243,7 @@ class ConversationService
         ]);
 
         foreach ($participantIds as $participantId) {
-            broadcast(new ParticipantAdded($conversation, $participantId))->toOthers();
+            broadcast(new ParticipantAdded($conversation, $participantId, $user))->toOthers();
         }
 
         $conversation = $conversation->fresh(['participants' => function ($query) {
@@ -275,7 +275,7 @@ class ConversationService
             'left_at' => now(),
         ]);
 
-        broadcast(new ParticipantRemoved($conversation, $userId))->toOthers();
+        broadcast(new ParticipantRemoved($conversation, $userId, $user))->toOthers();
     }
 
     /**

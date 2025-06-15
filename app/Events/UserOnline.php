@@ -2,8 +2,8 @@
 
 namespace App\Events;
 
-use App\Models\Conversation;
 use App\Models\User;
+use App\Models\Conversation;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
@@ -12,42 +12,38 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Broadcasting\PrivateChannel;
 
-class UserTyping implements ShouldBroadcast
+class UserOnline implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $conversation;
     public $user;
-    public $isTyping;
+    public $conversation;
 
-    public function __construct(Conversation $conversation, User $user, bool $isTyping)
+    public function __construct(User $user, Conversation $conversation)
     {
-        $this->conversation = $conversation;
         $this->user = $user;
-        $this->isTyping = $isTyping;
+        $this->conversation = $conversation;
     }
 
     public function broadcastOn()
     {
-        return $this->conversation->participants
-            ->where('user_id', '!=', $this->user->user_id)
-            ->map(function ($participant) {
-                return new PrivateChannel('user.' . $participant->user_id);
-            })
-            ->toArray();
+        return $this->conversation->participants->map(function ($participant) {
+            return new PrivateChannel('user.' . $participant->user_id);
+        })->toArray();
     }
 
     public function broadcastAs()
     {
-        return 'user.typing';
+        return 'user.online';
     }
 
     public function broadcastWith()
     {
         return [
-            'conversation_id' => $this->conversation->id,
             'user_id' => $this->user->user_id,
-            'is_typing' => $this->isTyping,
+            'user_name' => $this->user->user_name,
+            'status' => 'online',
+            'conversation_id' => $this->conversation->id,
         ];
     }
 } 

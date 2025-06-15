@@ -62,7 +62,7 @@ class FriendController extends ApiController
         $success = $this->friendService->sendRequest(Auth::id(), $request->receiver_id);
 
         if (!$success) {
-            return $this->error('Unable to send friend request', 400);
+            return $this->error('Unable to send friend request', 301);
         }
 
         return $this->success('Friend request sent successfully');

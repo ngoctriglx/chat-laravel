@@ -45,7 +45,7 @@ return new class extends Migration
         });
 
         // Create message_visibility table
-        Schema::create('message_visibility', function (Blueprint $table) {
+        Schema::create('message_visibilities', function (Blueprint $table) {
             $table->uuid('message_id');
             $table->unsignedBigInteger('user_id');
             $table->boolean('is_visible')->default(true);
@@ -60,7 +60,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('message_visibility');
+        Schema::dropIfExists('message_visibilities');
         Schema::dropIfExists('messages');
     }
 }; 

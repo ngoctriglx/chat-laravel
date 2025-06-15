@@ -2,12 +2,15 @@
 
 namespace App\Services;
 
-use App\Events\FriendEvent;
 use App\Models\Friend;
 use App\Models\FriendRequest;
+use App\Events\FriendRequestSent;
+use App\Events\FriendRequestAccepted;
+use App\Events\FriendRequestRejected;
+use App\Events\FriendRequestRevoked;
+use App\Events\FriendRemoved;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
 
 class FriendService
 {
@@ -30,17 +33,12 @@ class FriendService
      */
     public function sendRequest($id, $receiverId): bool
     {
-        // Check if users are the same
-        if ($id === $receiverId) {
-            return false;
-        }
-
-        // Check if friendship already exists
+        // Check if already friends
         if ($this->isFriend($id, $receiverId)) {
             return false;
         }
 
-        // Check for any existing request (including rejected ones)
+        // Check if there's already a request between these users
         $existingRequest = FriendRequest::where(function ($query) use ($id, $receiverId) {
             $query->where('sender_id', $id)
                 ->where('receiver_id', $receiverId);
@@ -50,13 +48,20 @@ class FriendService
         })->first();
 
         if ($existingRequest) {
-            // Update existing request
-            $existingRequest->update([
-                'sender_id' => $id,
-                'receiver_id' => $receiverId,
-                'status' => 'pending'
-            ]);
-            $request = $existingRequest;
+            if ($existingRequest->sender_id === $id) {
+                // Request already sent by current user
+                if ($existingRequest->status !== 'pending') {
+                    // Update status to pending only if it's not already pending
+                    $existingRequest->update(['status' => 'pending']);
+                    $request = $existingRequest;
+                } else {
+                    // Request is already pending, return false
+                    return false;
+                }
+            } else {
+                // There's a request from the other user, accept it
+                return $this->acceptRequest($id, $existingRequest->sender_id);
+            }
         } else {
             // Create new request
             $request = FriendRequest::create([
@@ -68,7 +73,8 @@ class FriendService
 
         if ($request) {
             // Broadcast friend request event
-            Event::dispatch(new FriendEvent('request', $receiverId, $id));
+            \Log::info([$receiverId, $id]);
+            broadcast(new FriendRequestSent($receiverId, $id))->toOthers();
             return true;
         }
 
@@ -93,7 +99,7 @@ class FriendService
 
         if ($success) {
             // Broadcast friend request revoked event
-            Event::dispatch(new FriendEvent('revoked', $receiverId, $id));
+            broadcast(new FriendRequestRevoked($receiverId, $id))->toOthers();
         }
 
         return $success;
@@ -118,7 +124,7 @@ class FriendService
             $request->save();
 
             // Broadcast friend rejected event
-            Event::dispatch(new FriendEvent('rejected', $senderId, $id));
+            broadcast(new FriendRequestRejected($senderId, $id))->toOthers();
 
             return true;
         } catch (\Exception $e) {
@@ -158,8 +164,8 @@ class FriendService
             $request->delete();
 
             // Broadcast friend accepted event to both users
-            Event::dispatch(new FriendEvent('accepted', $request->sender_id, $id));
-            Event::dispatch(new FriendEvent('accepted', $id, $request->sender_id));
+            broadcast(new FriendRequestAccepted($request->sender_id, $id))->toOthers();
+            broadcast(new FriendRequestAccepted($id, $request->sender_id))->toOthers();
 
             return true;
         });
@@ -194,8 +200,8 @@ class FriendService
 
         if ($success) {
             // Broadcast friend removed event to both users
-            Event::dispatch(new FriendEvent('removed', $userId, $friendId));
-            Event::dispatch(new FriendEvent('removed', $friendId, $userId));
+            broadcast(new FriendRemoved($userId, $friendId))->toOthers();
+            broadcast(new FriendRemoved($friendId, $userId))->toOthers();
         }
 
         return $success;

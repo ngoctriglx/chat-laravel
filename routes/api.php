@@ -21,7 +21,36 @@ Route::get('/health', function () {
 });
 
 Route::post('broadcasting', function (Request $request) {
-    return Broadcast::auth($request);
+    try {
+        // Validate that channel name is present
+        $channelName = $request->input('channel_name');
+        if (!$channelName) {
+            return response()->json(['error' => 'Channel name is required'], 400);
+        }
+        
+        // Validate that socket_id is present
+        $socketId = $request->input('socket_id');
+        if (!$socketId) {
+            return response()->json(['error' => 'Socket ID is required'], 400);
+        }
+        
+        // Log the channel name for debugging
+        \Log::info('Broadcasting auth request', [
+            'channel_name' => $channelName,
+            'user_id' => auth()->id(),
+            'socket_id' => $socketId
+        ]);
+        
+        return Broadcast::auth($request);
+    } catch (\Exception $e) {
+        \Log::error('Broadcasting auth error', [
+            'error' => $e->getMessage(),
+            'channel_name' => $request->input('channel_name'),
+            'user_id' => auth()->id()
+        ]);
+        
+        return response()->json(['error' => 'Broadcasting authentication failed'], 500);
+    }
 })->middleware('auth:sanctum');
 
 Route::prefix('v1')->group(function () {

@@ -11,7 +11,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Broadcasting\PrivateChannel;
 
-class ConversationCreated implements ShouldBroadcast
+class ConversationUpdated implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -19,11 +19,14 @@ class ConversationCreated implements ShouldBroadcast
 
     public function __construct(Conversation $conversation)
     {
-        $this->conversation = $conversation->load('participants');
+        $this->conversation = $conversation;
     }
 
     public function broadcastOn()
     {
+        // Load participants if not already loaded
+        $this->conversation->load('participants');
+        
         return $this->conversation->participants->map(function ($participant) {
             return new PrivateChannel('user.' . $participant->user_id);
         })->toArray();
@@ -31,13 +34,19 @@ class ConversationCreated implements ShouldBroadcast
 
     public function broadcastAs()
     {
-        return 'conversation.created';
+        return 'conversation.updated';
     }
 
     public function broadcastWith()
     {
         return [
-            'conversation' => $this->conversation,
+            'conversation' => [
+                'id' => $this->conversation->id,
+                'name' => $this->conversation->name,
+                'type' => $this->conversation->type,
+                'metadata' => $this->conversation->metadata,
+                'updated_at' => $this->conversation->updated_at,
+            ],
         ];
     }
 } 

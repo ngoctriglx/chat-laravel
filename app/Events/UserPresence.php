@@ -9,6 +9,7 @@ use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Broadcasting\PrivateChannel;
 
 class UserPresence implements ShouldBroadcast
 {
@@ -31,7 +32,7 @@ class UserPresence implements ShouldBroadcast
         $conversationIds = $this->user->conversations->pluck('id');
         
         return $conversationIds->map(function ($conversationId) {
-            return new PresenceChannel('conversation.' . $conversationId);
+            return new PrivateChannel('conversation.' . $conversationId);
         })->toArray();
     }
 

@@ -1,0 +1,59 @@
+<?php
+
+namespace App\Events;
+
+use App\Models\Message;
+use App\Models\MessageAttachment;
+use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PresenceChannel;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Broadcasting\PrivateChannel;
+
+class AttachmentAdded implements ShouldBroadcast
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public $message;
+    public $attachment;
+
+    public function __construct(Message $message, MessageAttachment $attachment)
+    {
+        $this->message = $message;
+        $this->attachment = $attachment;
+    }
+
+    public function broadcastOn()
+    {
+        // Load the conversation and participants if not already loaded
+        $this->message->load(['conversation.participants']);
+        
+        return $this->message->conversation->participants->map(function ($participant) {
+            return new PrivateChannel('user.' . $participant->user_id);
+        })->toArray();
+    }
+
+    public function broadcastAs()
+    {
+        return 'attachment.added';
+    }
+
+    public function broadcastWith()
+    {
+        return [
+            'message_id' => $this->message->id,
+            'conversation_id' => $this->message->conversation_id,
+            'attachment' => [
+                'id' => $this->attachment->id,
+                'file_name' => $this->attachment->file_name,
+                'file_path' => $this->attachment->file_path,
+                'file_size' => $this->attachment->file_size,
+                'mime_type' => $this->attachment->mime_type,
+                'url' => $this->attachment->url,
+                'created_at' => $this->attachment->created_at,
+            ],
+        ];
+    }
+} 

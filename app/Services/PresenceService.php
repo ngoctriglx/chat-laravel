@@ -24,13 +24,11 @@ class PresenceService
         Cache::put($key, now()->timestamp, self::ONLINE_TTL);
 
         // Get user's active conversations
-        $conversationIds = $user->conversations()
-            ->pluck('conversations.id')
-            ->toArray();
+        $conversations = $user->conversations()->get();
 
         // Broadcast online status to all conversations
-        foreach ($conversationIds as $conversationId) {
-            broadcast(new UserOnline($user, $conversationId))->toOthers();
+        foreach ($conversations as $conversation) {
+            broadcast(new UserOnline($user, $conversation))->toOthers();
         }
     }
 
@@ -43,13 +41,11 @@ class PresenceService
         Cache::forget($key);
 
         // Get user's active conversations
-        $conversationIds = $user->conversations()
-            ->pluck('conversations.id')
-            ->toArray();
+        $conversations = $user->conversations()->get();
 
         // Broadcast offline status to all conversations
-        foreach ($conversationIds as $conversationId) {
-            broadcast(new UserOffline($user, $conversationId))->toOthers();
+        foreach ($conversations as $conversation) {
+            broadcast(new UserOffline($user, $conversation))->toOthers();
         }
     }
 
@@ -61,7 +57,7 @@ class PresenceService
         $key = $this->getTypingKey($user->user_id, $conversation->id);
         Cache::put($key, now()->timestamp, self::TYPING_TTL);
 
-        broadcast(new UserTyping($user, $conversation))->toOthers();
+        broadcast(new UserTyping($conversation, $user, true))->toOthers();
     }
 
     /**
