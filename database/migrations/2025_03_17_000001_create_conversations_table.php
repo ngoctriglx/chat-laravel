@@ -14,6 +14,7 @@ return new class extends Migration
             $table->string('type')->default('direct'); // direct, group
             $table->string('name')->nullable(); // for group conversations
             $table->json('metadata')->nullable();
+            $table->uuid('last_message_id')->nullable(); // Reference to the last message
             $table->timestamp('last_message_at')->nullable();
             $table->boolean('is_deleted')->default(false);
             $table->timestamps();
@@ -22,6 +23,11 @@ return new class extends Migration
             $table->foreign('created_by')
                   ->references('user_id')
                   ->on('users')
+                  ->onDelete('set null');
+                  
+            $table->foreign('last_message_id')
+                  ->references('id')
+                  ->on('messages')
                   ->onDelete('set null');
         });
     }

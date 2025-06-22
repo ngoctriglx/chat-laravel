@@ -17,18 +17,25 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class MessageService
 {
+    protected $conversationService;
+
+    public function __construct(ConversationService $conversationService)
+    {
+        $this->conversationService = $conversationService;
+    }
+
     /**
      * Get messages for a conversation with pagination
      */
     public function getConversationMessages(Conversation $conversation, User $user, $cursorId = null, int $perPage = 20): LengthAwarePaginator
     {
-        if (!$conversation->hasActiveParticipant($user->user_id)) {
+        if (!$this->conversationService->hasActiveParticipant($conversation, $user)) {
             throw new \Exception('Unauthorized');
         }
 
         $query = $conversation->messages()
             ->whereHas('visibility', function ($query) use ($user) {
-                $query->where('user_id', $user->user_id)
+                $query->where('message_visibilities.user_id', $user->user_id)
                     ->where('is_visible', true);
             })
             ->with(['sender', 'reactions.user', 'attachments'])
@@ -57,7 +64,7 @@ class MessageService
      */
     public function sendMessage(Conversation $conversation, User $sender, array $data): Message
     {
-        if (!$conversation->hasActiveParticipant($sender->user_id)) {
+        if (!$this->conversationService->hasActiveParticipant($conversation, $sender)) {
             throw new \Exception('Unauthorized');
         }
 
@@ -92,8 +99,11 @@ class MessageService
 
             MessageVisibility::insert($visibilityRecords);
 
-            // Update conversation's last_message_at
-            $conversation->update(['last_message_at' => now()]);
+            // Update conversation's last_message_at and last_message_id
+            $conversation->update([
+                'last_message_at' => now(),
+                'last_message_id' => $message->id
+            ]);
 
             DB::commit();
 
@@ -136,10 +146,26 @@ class MessageService
             throw new \Exception('Unauthorized');
         }
 
+        $conversation = $message->conversation;
+        $wasLastMessage = $conversation->last_message_id === $message->id;
+
         if ($deleteForEveryone) {
             $message->delete();
         } else {
             $message->update(['is_deleted' => true]);
+        }
+
+        // If this was the last message, update the conversation's last_message_id
+        if ($wasLastMessage) {
+            $newLastMessage = $conversation->messages()
+                ->where('id', '!=', $message->id)
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            $conversation->update([
+                'last_message_id' => $newLastMessage ? $newLastMessage->id : null,
+                'last_message_at' => $newLastMessage ? $newLastMessage->created_at : null,
+            ]);
         }
 
         broadcast(new MessageDeleted($message, $deleteForEveryone))->toOthers();
@@ -151,7 +177,7 @@ class MessageService
     public function markAsRead(Conversation $conversation, User $user): void
     {
         $participant = $conversation->participants()
-            ->where('user_id', $user->user_id)
+            ->where('conversation_participants.user_id', $user->user_id)
             ->first();
 
         if (!$participant) {
@@ -227,7 +253,7 @@ class MessageService
         try {
             $messages = $conversation->messages()
                 ->whereDoesntHave('visibility', function ($query) use ($user) {
-                    $query->where('user_id', $user->user_id);
+                    $query->where('message_visibilities.user_id', $user->user_id);
                 })
                 ->get();
 
@@ -267,18 +293,56 @@ class MessageService
      */
     public function searchMessages(Conversation $conversation, User $user, string $query, int $perPage = 20): LengthAwarePaginator
     {
-        if (!$conversation->hasActiveParticipant($user->user_id)) {
+        if (!$this->conversationService->hasActiveParticipant($conversation, $user)) {
             throw new \Exception('Unauthorized');
         }
 
         return $conversation->messages()
             ->whereHas('visibility', function ($query) use ($user) {
-                $query->where('user_id', $user->user_id)
+                $query->where('message_visibilities.user_id', $user->user_id)
                     ->where('is_visible', true);
             })
             ->where('content', 'like', "%{$query}%")
             ->with(['sender', 'reactions.user', 'attachments'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
+    }
+
+    /**
+     * Check if a user has read a message.
+     */
+    public function isReadBy(Message $message, User $user): bool
+    {
+        return $message->readBy()->where('message_read_status.user_id', $user->user_id)->exists();
+    }
+
+    /**
+     * Get the reaction count for a specific reaction type.
+     */
+    public function getReactionCount(Message $message, string $reactionType): int
+    {
+        return $message->reactions()->where('reaction_type', $reactionType)->count();
+    }
+
+    /**
+     * Check if a user has reacted with a specific reaction type.
+     */
+    public function hasReactionFrom(Message $message, User $user, string $reactionType): bool
+    {
+        return $message->reactions()
+            ->where('user_id', $user->user_id)
+            ->where('reaction_type', $reactionType)
+            ->exists();
+    }
+
+    /**
+     * Check if a message is visible to a user.
+     */
+    public function isVisibleTo(Message $message, User $user): bool
+    {
+        return $message->visibility()
+            ->where('message_visibilities.user_id', $user->user_id)
+            ->where('is_visible', true)
+            ->exists();
     }
 } 

@@ -3,9 +3,8 @@
 namespace App\Http\Controllers\API\User;
 
 use App\Http\Controllers\API\ApiController;
-use App\Models\Friend;
-use App\Models\User;
-use App\Services\FriendService;
+use App\Services\Interfaces\FriendshipServiceInterface;
+use App\Services\Interfaces\FriendRequestServiceInterface;
 use App\Services\UserService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,14 +13,17 @@ use Illuminate\Support\Facades\Validator;
 class FriendController extends ApiController
 {
     protected $userService;
-    protected $friendService;
+    protected $friendshipService;
+    protected $friendRequestService;
 
     public function __construct(
         UserService $userService,
-        FriendService $friendService
+        FriendshipServiceInterface $friendshipService,
+        FriendRequestServiceInterface $friendRequestService
     ) {
         $this->userService = $userService;
-        $this->friendService = $friendService;
+        $this->friendshipService = $friendshipService;
+        $this->friendRequestService = $friendRequestService;
     }
     
     /**
@@ -36,7 +38,7 @@ class FriendController extends ApiController
         $page = $request->input('page', 1);
 
         try {
-            $friends = $this->friendService->getFriendsList(Auth::id(), $perPage, $page);
+            $friends = $this->friendshipService->getFriendsList(Auth::id(), $perPage, $page);
             return $this->success($friends);
         } catch (\Exception $e) {
             return $this->error('Unable to retrieve friends list', 500);
@@ -59,7 +61,7 @@ class FriendController extends ApiController
             return $this->error($validator->errors()->first(), 422);
         }
 
-        $success = $this->friendService->sendRequest(Auth::id(), $request->receiver_id);
+        $success = $this->friendRequestService->sendRequest(Auth::id(), $request->receiver_id);
 
         if (!$success) {
             return $this->error('Unable to send friend request', 301);
@@ -85,7 +87,7 @@ class FriendController extends ApiController
             return $this->error($validator->errors()->first(), 422);
         }
 
-        $success = $this->friendService->revokeRequest(Auth::id(), $receiver_id);
+        $success = $this->friendRequestService->revokeRequest(Auth::id(), $receiver_id);
 
         if (!$success) {
             return $this->error('Unable to revoke friend request', 400);
@@ -111,7 +113,7 @@ class FriendController extends ApiController
                 return $this->error($validator->errors()->first(), 422);
             }
 
-            $success = $this->friendService->rejectRequest(Auth::id(), $request->sender_id);
+            $success = $this->friendRequestService->rejectRequest(Auth::id(), $request->sender_id);
 
             if (!$success) {
                 return $this->error('Unable to reject friend request', 400);
@@ -139,7 +141,7 @@ class FriendController extends ApiController
             return $this->error($validator->errors()->first(), 422);
         }
 
-        $success = $this->friendService->acceptRequest(Auth::id(), $request->sender_id);
+        $success = $this->friendRequestService->acceptRequest(Auth::id(), $request->sender_id);
 
         if (!$success) {
             return $this->error('Unable to accept friend request', 400);
@@ -161,7 +163,7 @@ class FriendController extends ApiController
             return $this->error($validator->errors()->first(), 422);
         }
 
-        $success = $this->friendService->removeFriend(Auth::id(), $friendId);
+        $success = $this->friendshipService->removeFriend(Auth::id(), $friendId);
 
         if (!$success) {
             return $this->error('Unable to remove friend', 400);
@@ -182,7 +184,7 @@ class FriendController extends ApiController
         $page = $request->input('page', 1);
 
         try {
-            $friendRequests = $this->friendService->getFriendRequest(Auth::id(), $perPage, $page);
+            $friendRequests = $this->friendRequestService->getFriendRequests(Auth::id(), $perPage, $page);
             return $this->success($friendRequests);
         } catch (\Exception $e) {
             return $this->error('Unable to retrieve friend requests', 500);

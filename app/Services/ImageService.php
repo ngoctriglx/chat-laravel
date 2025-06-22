@@ -55,4 +55,26 @@ class ImageService
 
         return $path;
     }
+
+    public function saveBase64Image(string $base64Image, string $folder = 'uploads'): ?string
+    {
+        if (!preg_match('/^data:image\/(\w+);base64,/', $base64Image, $matches)) {
+            return null;
+        }
+
+        $imageType = $matches[1];
+        $base64Image = substr($base64Image, strpos($base64Image, ',') + 1);
+        $imageData = base64_decode($base64Image);
+
+        if ($imageData === false) {
+            return null;
+        }
+
+        $fileName = \Illuminate\Support\Str::random(40) . '.' . $imageType;
+        $path = "$folder/$fileName";
+        
+        Storage::disk('public')->put($path, $imageData);
+
+        return $path;
+    }
 }

@@ -9,6 +9,7 @@ use App\Events\ConversationUpdated;
 use App\Events\ConversationDeleted;
 use App\Events\ParticipantAdded;
 use App\Events\ParticipantRemoved;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -39,7 +40,7 @@ class ConversationService
                     $subquery->select('last_read_at')
                         ->from('conversation_participants')
                         ->where('conversation_id', DB::raw('conversations.id'))
-                        ->where('user_id', $user->user_id);
+                        ->where('conversation_participants.user_id', $user->user_id);
                 });
             }])
             ->orderBy('last_message_at', 'desc')
@@ -63,11 +64,12 @@ class ConversationService
         try {
             // Check for existing direct conversation
             if ($data['type'] === 'direct' && isset($data['participant_ids'][0])) {
-                $existingConversation = $this->findDirectConversation($creator, $data['participant_ids'][0]);
+                $otherUserId = User::where('user_id', $data['participant_ids'][0])->firstOrFail();
+                $existingConversation = $this->findDirectConversation($creator, $otherUserId->user_id);
 
                 if ($existingConversation) {
                     // If user was previously inactive, reactivate them
-                    if (!$existingConversation->hasActiveParticipant($creator->user_id)) {
+                    if (!$this->hasActiveParticipant($existingConversation, $creator)) {
                         $existingConversation->participants()->updateExistingPivot($creator->user_id, [
                             'is_active' => true,
                             'left_at' => null,
@@ -142,7 +144,7 @@ class ConversationService
      */
     public function updateConversation(Conversation $conversation, array $data, User $user): Conversation
     {
-        if (!$conversation->hasActiveParticipant($user->user_id)) {
+        if (!$this->hasActiveParticipant($conversation, $user)) {
             throw new \Exception('Unauthorized');
         }
 
@@ -168,7 +170,7 @@ class ConversationService
      */
     public function deleteConversation(Conversation $conversation, User $user): void
     {
-        if (!$conversation->hasParticipant($user->user_id)) {
+        if (!$this->hasParticipant($conversation, $user)) {
             throw new \Exception('Unauthorized');
         }
 
@@ -228,7 +230,7 @@ class ConversationService
      */
     public function addParticipants(Conversation $conversation, array $participantIds, User $user): Conversation
     {
-        if (!$conversation->hasActiveParticipant($user->user_id)) {
+        if (!$this->hasActiveParticipant($conversation, $user)) {
             throw new \Exception('Unauthorized');
         }
 
@@ -261,20 +263,11 @@ class ConversationService
      */
     public function removeParticipant(Conversation $conversation, int $userId, User $user): void
     {
-        if ($conversation->created_by !== $user->user_id) {
-            throw new \Exception('Only creator can remove participants');
+        if ($conversation->created_by !== $user->user_id && Auth::id() !== $userId) {
+            throw new \Exception('Unauthorized');
         }
 
-        if ($conversation->type === 'direct') {
-            throw new \Exception('Cannot remove participants from direct conversation');
-        }
-
-        // Mark participant as inactive instead of detaching
-        $conversation->participants()->updateExistingPivot($userId, [
-            'is_active' => false,
-            'left_at' => now(),
-        ]);
-
+        $conversation->participants()->detach($userId);
         broadcast(new ParticipantRemoved($conversation, $userId, $user))->toOthers();
     }
 
@@ -283,7 +276,8 @@ class ConversationService
      */
     private function findDirectConversation(User $user1, int $user2Id): ?Conversation
     {
-        return Conversation::where('type', 'direct')
+        return Conversation::select('conversations.*')
+            ->where('type', 'direct')
             ->whereHas('participants', function ($query) use ($user1) {
                 $query->where('conversation_participants.user_id', $user1->user_id);
             })
@@ -318,5 +312,50 @@ class ConversationService
                 return $participant;
             });
         }
+    }
+
+    /**
+     * Check if a user is a participant in the conversation.
+     */
+    public function hasParticipant(Conversation $conversation, User $user): bool
+    {
+        return $conversation->participants()->where('conversation_participants.user_id', $user->user_id)->exists();
+    }
+
+    /**
+     * Check if a user is an active participant in the conversation.
+     */
+    public function hasActiveParticipant(Conversation $conversation, User $user): bool
+    {
+        return $conversation->participants()
+            ->where('conversation_participants.user_id', $user->user_id)
+            ->wherePivot('is_active', true)
+            ->exists();
+    }
+
+    /**
+     * Get the other participant in a direct conversation.
+     */
+    public function getOtherParticipant(Conversation $conversation, User $user): ?User
+    {
+        if ($conversation->type !== 'direct') {
+            return null;
+        }
+
+        return $conversation->participants()
+            ->where('user_id', '!=', $user->user_id)
+            ->first();
+    }
+
+    /**
+     * Add a participant to a conversation.
+     */
+    public function addParticipant(Conversation $conversation, User $user, string $role = 'member'): void
+    {
+        $conversation->participants()->attach($user->user_id, [
+            'role' => $role,
+            'is_active' => true,
+            'joined_at' => now(),
+        ]);
     }
 }

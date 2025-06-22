@@ -23,144 +23,116 @@ class ConversationController extends ApiController
 
     public function index(Request $request)
     {
-        try {
-            $perPage = $request->query('per_page', 20);
-            $conversations = $this->conversationService->getUserConversations(Auth::user(), $perPage);
-            return $this->success($conversations);
-        } catch (\Exception $e) {
-            return $this->handleException($e);
-        }
+        $perPage = $request->query('per_page', 20);
+        $conversations = $this->conversationService->getUserConversations(Auth::user(), $perPage);
+        return $this->success($conversations);
     }
 
     public function show(Conversation $conversation)
     {
-        try {
-            if (!$conversation->hasActiveParticipant(Auth::id())) {
-                return $this->error('You are not a participant in this conversation.', 403);
-            }
-            
-            // Load participants and enhance with user information
-            $conversation->load(['participants' => function ($query) {
-                $query->where('is_active', true);
-            }, 'creator']);
-            
-            // Enhance participants with additional user information
-            $this->conversationService->enhanceParticipantsWithUserInfo($conversation);
-            
-            return $this->success($conversation);
-        } catch (\Exception $e) {
-            return $this->handleException($e);
+        if (!$this->conversationService->hasActiveParticipant($conversation, Auth::user())) {
+            return $this->error('You are not a participant in this conversation.', 403);
         }
+        
+        // Load participants and enhance with user information
+        $conversation->load(['participants' => function ($query) {
+            $query->where('is_active', true);
+        }, 'creator']);
+        
+        // Enhance participants with additional user information
+        $this->conversationService->enhanceParticipantsWithUserInfo($conversation);
+        
+        return $this->success($conversation);
     }
 
     public function store(Request $request)
     {
-        try {
-            $validator = Validator::make($request->all(), [
-                'participant_ids' => 'required|array|min:1',
-                'participant_ids.*' => 'exists:users,user_id',
-                'name' => 'required_if:type,group|string|max:255',
-                'type' => 'required|in:direct,group',
-                'metadata' => 'array',
-            ]);
+        $validator = Validator::make($request->all(), [
+            'participant_ids' => 'required|array|min:1',
+            'participant_ids.*' => 'exists:users,user_id',
+            'name' => 'required_if:type,group|string|max:255',
+            'type' => 'required|in:direct,group',
+            'metadata' => 'array',
+        ]);
 
-            if ($validator->fails()) {
-                return $this->error($validator->errors()->first(), 422);
-            }
-
-            $conversation = $this->conversationService->createConversation(
-                $request->all(),
-                Auth::user()
-            );
-
-            return $this->success($conversation, 201);
-        } catch (\Exception $e) {
-            return $this->handleException($e);
+        if ($validator->fails()) {
+            return $this->error($validator->errors()->first(), 422);
         }
+
+        $conversation = $this->conversationService->createConversation(
+            $request->all(),
+            Auth::user()
+        );
+
+        return $this->success($conversation, 201);
     }
 
     public function update(Request $request, Conversation $conversation)
     {
-        try {
-            if ($conversation->created_by !== Auth::id()) {
-                return $this->error('Only the conversation creator can update it.', 403);
-            }
-
-            $validator = Validator::make($request->all(), [
-                'name' => 'required|string|max:255',
-                'metadata' => 'array',
-            ]);
-
-            if ($validator->fails()) {
-                return $this->error($validator->errors()->first(), 422);
-            }
-
-            $conversation = $this->conversationService->updateConversation(
-                $conversation,
-                $request->all(),
-                Auth::user()
-            );
-
-            return $this->success($conversation);
-        } catch (\Exception $e) {
-            return $this->handleException($e);
+        if ($conversation->created_by !== Auth::id()) {
+            return $this->error('Only the conversation creator can update it.', 403);
         }
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'metadata' => 'array',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors()->first(), 422);
+        }
+
+        $conversation = $this->conversationService->updateConversation(
+            $conversation,
+            $request->all(),
+            Auth::user()
+        );
+
+        return $this->success($conversation);
     }
 
     public function destroy(Conversation $conversation)
     {
-        try {
-            $this->conversationService->deleteConversation($conversation, Auth::user());
-            return $this->success('Conversation deleted successfully');
-        } catch (\Exception $e) {
-            return $this->handleException($e);
-        }
+        $this->conversationService->deleteConversation($conversation, Auth::user());
+        return $this->success('Conversation deleted successfully');
     }
 
     public function addParticipants(Request $request, Conversation $conversation)
     {
-        try {
-            if ($conversation->created_by !== Auth::id()) {
-                return $this->error('Only the conversation creator can add participants.', 403);
-            }
-
-            $validator = Validator::make($request->all(), [
-                'participant_ids' => 'required|array|min:1',
-                'participant_ids.*' => 'exists:users,user_id',
-            ]);
-
-            if ($validator->fails()) {
-                return $this->error($validator->errors()->first(), 422);
-            }
-
-            $this->conversationService->addParticipants(
-                $conversation,
-                $request->input('participant_ids'),
-                Auth::user()
-            );
-
-            return $this->success('Participants added successfully');
-        } catch (\Exception $e) {
-            return $this->handleException($e);
+        if ($conversation->created_by !== Auth::id()) {
+            return $this->error('Only the conversation creator can add participants.', 403);
         }
+
+        $validator = Validator::make($request->all(), [
+            'participant_ids' => 'required|array|min:1',
+            'participant_ids.*' => 'exists:users,user_id',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors()->first(), 422);
+        }
+
+        $this->conversationService->addParticipants(
+            $conversation,
+            $request->input('participant_ids'),
+            Auth::user()
+        );
+
+        return $this->success('Participants added successfully');
     }
 
     public function removeParticipant(Conversation $conversation, User $user)
     {
-        try {
-            if ($conversation->created_by !== Auth::id()) {
-                return $this->error('Only the conversation creator can remove participants.', 403);
-            }
-
-            $this->conversationService->removeParticipant(
-                $conversation,
-                $user->user_id,
-                Auth::user()
-            );
-
-            return $this->success('Participant removed successfully');
-        } catch (\Exception $e) {
-            return $this->handleException($e);
+        if ($conversation->created_by !== Auth::id()) {
+            return $this->error('Only the conversation creator can remove participants.', 403);
         }
+
+        $this->conversationService->removeParticipant(
+            $conversation,
+            $user->user_id,
+            Auth::user()
+        );
+
+        return $this->success('Participant removed successfully');
     }
 }

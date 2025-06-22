@@ -3,10 +3,18 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Services\UserSearchStrategies\UserSearchStrategy;
 use Illuminate\Support\Facades\Cache;
 
 class UserService
 {
+    private $searchStrategies;
+
+    public function __construct(array $searchStrategies = [])
+    {
+        $this->searchStrategies = $searchStrategies;
+    }
+
     public function getUserInformation($userId)
     {
         return Cache::remember("user_info:{$userId}", now()->addMinutes(1), function () use ($userId) {
@@ -77,49 +85,23 @@ class UserService
         $query = User::with('userDetail')
             ->where('user_account_status', User::STATUS_ACTIVE);
 
-        // Search by exact email or phone only (security requirement)
-        if (!empty($filters['q'])) {
-            $searchQuery = $filters['q'];
-            
-            // Check if it's a valid email or phone format
-            if (filter_var($searchQuery, FILTER_VALIDATE_EMAIL)) {
-                $query->where('user_email', $searchQuery);
-            } elseif (preg_match('/^\+?[0-9]{10,15}$/', $searchQuery)) {
-                $query->where('user_phone', $searchQuery);
-            } else {
-                // Return null if query is not a valid email or phone
-                return null;
-            }
+        if (!empty($filters['q']) && !empty($filters['type']) && isset($this->searchStrategies[$filters['type']])) {
+            $strategy = $this->searchStrategies[$filters['type']];
+            $query = $strategy->apply($query, $filters['q']);
+        } else {
+            return null;
         }
 
-        // Filter by type (email or phone only)
-        if (!empty($filters['type'])) {
-            switch ($filters['type']) {
-                case 'email':
-                    $query->whereNotNull('user_email');
-                    break;
-                case 'phone':
-                    $query->whereNotNull('user_phone');
-                    break;
-                default:
-                    // Invalid type, return null
-                    return null;
-            }
-        }
-
-        // Exclude current user
         if (!empty($filters['exclude_user_id'])) {
             $query->where('user_id', '!=', $filters['exclude_user_id']);
         }
 
-        // Get single user
         $user = $query->first();
 
         if (!$user) {
             return null;
         }
 
-        // Return user information in the expected format
         return $this->getUserInformation($user->user_id);
     }
 }

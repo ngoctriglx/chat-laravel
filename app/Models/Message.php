@@ -103,43 +103,8 @@ class Message extends Model
         return $query->where('is_edited', true);
     }
 
-    /**
-     * Check if a user has read this message.
-     */
-    public function isReadBy($userId): bool
-    {
-        return $this->readBy()->where('user_id', $userId)->exists();
-    }
-
-    /**
-     * Get the reaction count for a specific reaction type.
-     */
-    public function getReactionCount($reactionType): int
-    {
-        return $this->reactions()->where('reaction_type', $reactionType)->count();
-    }
-
-    /**
-     * Check if a user has reacted with a specific reaction type.
-     */
-    public function hasReactionFrom($userId, $reactionType): bool
-    {
-        return $this->reactions()
-            ->where('user_id', $userId)
-            ->where('reaction_type', $reactionType)
-            ->exists();
-    }
-
     public function visibility()
     {
         return $this->hasMany(MessageVisibility::class);
-    }
-
-    public function isVisibleTo(User $user): bool
-    {
-        return $this->visibility()
-            ->where('user_id', $user->user_id)
-            ->where('is_visible', true)
-            ->exists();
     }
 } 

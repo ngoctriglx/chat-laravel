@@ -20,29 +20,21 @@ class PresenceController extends ApiController
 
     public function setOnline()
     {
-        try {
-            $user = Auth::user();
-            $this->presenceService->setOnline($user);
-            
-            broadcast(new UserPresence($user, 'online'));
-            
-            return $this->success('Online status updated');
-        } catch (\Exception $e) {
-            return $this->handleException($e);
-        }
+        $user = Auth::user();
+        $this->presenceService->setOnline($user);
+        
+        broadcast(new UserPresence($user, 'online'));
+        
+        return $this->success('Online status updated');
     }
 
     public function setOffline()
     {
-        try {
-            $user = Auth::user();
-            $this->presenceService->setOffline($user);
-            
-            broadcast(new UserPresence($user, 'offline', now()));
-            
-            return $this->success('Offline status updated');
-        } catch (\Exception $e) {
-            return $this->handleException($e);
-        }
+        $user = Auth::user();
+        $this->presenceService->setOffline($user);
+        
+        broadcast(new UserPresence($user, 'offline', now()));
+        
+        return $this->success('Offline status updated');
     }
 } 

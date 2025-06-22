@@ -18,6 +18,7 @@ class Conversation extends Model
         'type',
         'name',
         'metadata',
+        'last_message_id',
         'last_message_at',
         'is_deleted',
     ];
@@ -74,6 +75,14 @@ class Conversation extends Model
     }
 
     /**
+     * Get the last message in the conversation (direct reference).
+     */
+    public function lastMessage(): BelongsTo
+    {
+        return $this->belongsTo(Message::class, 'last_message_id');
+    }
+
+    /**
      * Scope a query to only include active conversations.
      */
     public function scopeActive($query)
@@ -96,37 +105,4 @@ class Conversation extends Model
     {
         return $query->where('type', 'group');
     }
-
-    /**
-     * Check if a user is a participant in the conversation.
-     */
-    public function hasParticipant(int $userId): bool
-    {
-        return $this->participants()->where('conversation_participants.user_id', $userId)->exists();
-    }
-
-    /**
-     * Check if a user is an active participant in the conversation.
-     */
-    public function hasActiveParticipant(int $userId): bool
-    {
-        return $this->participants()
-            ->where('conversation_participants.user_id', $userId)
-            ->wherePivot('is_active', true)
-            ->exists();
-    }
-
-    /**
-     * Get the other participant in a direct conversation.
-     */
-    public function getOtherParticipant($userId)
-    {
-        if ($this->type !== 'direct') {
-            return null;
-        }
-
-        return $this->participants()
-            ->where('conversation_participants.user_id', '!=', $userId)
-            ->first();
-    }
-} 
+}

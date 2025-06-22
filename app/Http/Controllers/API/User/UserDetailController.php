@@ -22,36 +22,32 @@ class UserDetailController extends ApiController
 
     public function updateMe(UserDetailRequest $request)
     {
-        try {
-            $user = $request->user();
-            $userDetail = $user->userDetail()->firstOrNew([]);
+        $user = $request->user();
+        $userDetail = $user->userDetail()->firstOrNew([]);
 
-            if ($request->hasFile('picture')) {
-                $userDetail->picture = $this->imageService->crop($request->file('picture'), 800, 800, 'avatars');
-            }
-
-            if ($request->hasFile('background_image')) {
-                $userDetail->background_image = $this->imageService->crop($request->file('background_image'), 1800, 1200, 'backgrounds');
-            }
-
-            $userDetail->fill($request->only([
-                'first_name',
-                'last_name',
-                'gender',
-                'birth_date',
-                'status_message'
-            ]));
-
-            if ($userDetail->isDirty()) {
-                $userDetail->save();
-                Cache::forget("user_info:{$user->user_id}");
-            }
-
-            $userDetail = $this->userService->getUserInformation($user->user_id);
-
-            return $this->success($userDetail);
-        } catch (\Throwable $e) {
-            return $this->handleException($e);
+        if ($request->hasFile('picture')) {
+            $userDetail->picture = $this->imageService->crop($request->file('picture'), 800, 800, 'avatars');
         }
+
+        if ($request->hasFile('background_image')) {
+            $userDetail->background_image = $this->imageService->crop($request->file('background_image'), 1800, 1200, 'backgrounds');
+        }
+
+        $userDetail->fill($request->only([
+            'first_name',
+            'last_name',
+            'gender',
+            'birth_date',
+            'status_message'
+        ]));
+
+        if ($userDetail->isDirty()) {
+            $userDetail->save();
+            Cache::forget("user_info:{$user->user_id}");
+        }
+
+        $userDetail = $this->userService->getUserInformation($user->user_id);
+
+        return $this->success($userDetail);
     }
 }
